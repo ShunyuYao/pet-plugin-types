@@ -16,30 +16,46 @@ export type PluginKind =
   | 'dashboard-card';
 
 /**
- * 权限名。
+ * 已冻结（A 档）的权限名。同一 `apiVersion` 内只加不改不删。
  *
- * ⚠️ 本联合类型**尚未冻结**：具体开放哪些权限、名称是否调整，
- * 取决于 SDK surface 终审（宿主仓库 US-PP07）的结论。
- * 在结论落地前，这里只列出宿主 runtime.js sdkCall 表当前实际存在的命名空间，
- * 供开发者参考，不构成契约承诺。
+ * - `net:<hostname>` **必须逐域名声明**，不存在宽泛的 `net`。要访问
+ *   `https://api.example.com/x` 就写 `'net:api.example.com'`。
+ * - `service:<name>` 由宿主从 manifest 的 `services` 数组自动展开，
+ *   一般不必手写进 `permissions`。
  */
-export type PluginPermission =
+export type FrozenPermission =
   | 'storage'
   | 'secrets'
   | 'pet'
   | 'ui'
   | 'events'
   | 'scheduler'
-  | 'net'
-  | 'services'
-  | 'settings'
+  | 'friends'
+  | 'dashboard'
+  | 'tools'
+  | `net:${string}`
+  | `service:${string}`;
+
+/**
+ * @experimental 实验档（B 档）权限名。
+ *
+ * 这些权限对应的 SDK 方法**签名/语义可能在任一 apiVersion 变更，且不走废弃流程**；
+ * 权限名本身也可能被细分（例如 `files` 大概率拆成 `files:pick` / `files:read` /
+ * `files:open`）。用得了，但要跟版本。
+ */
+export type ExperimentalPermission =
   | 'ai'
   | 'files'
-  | 'friends'
   | 'activity'
-  | 'dashboard'
-  // 联网需按域名逐一声明，如 'net:api.example.com'
-  | `net:${string}`;
+  | 'calendar-provider';
+
+/**
+ * 权限名的字面量联合（A 档 + B 档）。
+ *
+ * 判定为 C 档「本轮不开放」的权限（`ui:theme`、`auth-window`）**不在此列**：
+ * 宿主运行时仍认它们（内置插件在用），但它们不是对外契约，第三方插件不应声明。
+ */
+export type PluginPermission = FrozenPermission | ExperimentalPermission;
 
 export interface PanelEntry {
   /** 面板 HTML 相对路径，经 plugin:// 协议加载 */
@@ -80,16 +96,28 @@ export interface PluginManifest {
   name: string;
   /** 形如 x.y.z */
   version: string;
-  /** 低于此宿主版本则不加载 */
+  /** 低于此宿主版本则不加载。说的是「宿主构建够不够新」。 */
   minHostVersion?: string;
   /**
-   * SDK 契约版本。宿主用它判断兼容性；缺省时按宿主的最低兼容版本处理。
-   * ⚠️ 该字段由宿主 US-PP09 引入，尚未随宿主发布。
+   * SDK 契约版本，说的是「插件按哪一代 SDK 语义写的」——与 {@link PluginManifest.minHostVersion}
+   * 是两个维度。
+   *
+   * 可选；**声明了就必须是 ≥1 的整数**（写成 `"1"` / `1.5` / `0` 会被宿主判为包不合法）。
+   * 缺省时宿主按最低兼容版本处理，老插件不因未声明而失效。
+   *
+   * 当前宿主：`CURRENT_API_VERSION = 1`、`MIN_COMPATIBLE_API_VERSION = 1`。
+   * 超出宿主支持范围的插件会被置为 disabled 并写明原因，不会崩在半路。
    */
   apiVersion?: number;
   /** 非空子集 */
   kind: PluginKind[];
   permissions?: PluginPermission[];
+  /**
+   * 要消费的服务名。宿主授权时展开为 `service:<name>`。
+   *
+   * 注意：**提供**服务（`services.provide`）当前仅内置插件可用，
+   * 第三方插件只能消费。
+   */
   services?: string[];
   /** kind 含 'service' 时必填 */
   provides?: { service: string };

@@ -1,7 +1,7 @@
 {
   "name": "@pet/plugin-types",
-  "version": "0.0.0-experimental",
-  "description": "桌宠（吐梨邦）插件 SDK 的 TypeScript 类型定义。契约尚未冻结，勿用于生产。",
+  "version": "1.0.0-rc.1",
+  "description": "桌宠（吐梨邦）插件 SDK 的 TypeScript 类型定义。SDK surface 的唯一权威文档，对应 apiVersion 1。",
   "types": "index.d.ts",
   "files": [
     "index.d.ts",
@@ -18,8 +18,10 @@
     "access": "public"
   },
   "petSdk": {
-    "apiVersion": null,
-    "frozen": false,
-    "note": "apiVersion 待宿主 US-PP09 落地、冻结集待 US-PP07 拍板后填写"
+    "apiVersion": 1,
+    "frozen": true,
+    "frozenMethods": 30,
+    "experimentalMethods": 12,
+    "note": "A 档 30 条已冻结（同一 apiVersion 内只加不改不删）；标 @experimental 的 12 条不受兼容承诺约束，签名可能在任一 apiVersion 变更。分档依据见宿主 docs/plugin-sdk-freeze-review.md，方法清单以宿主 demo/core/plugin-runtime/sdk-surface.js 为准。"
   }
 }
