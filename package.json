@@ -1,0 +1,25 @@
+{
+  "name": "@pet/plugin-types",
+  "version": "0.0.0-experimental",
+  "description": "桌宠（吐梨邦）插件 SDK 的 TypeScript 类型定义。契约尚未冻结，勿用于生产。",
+  "types": "index.d.ts",
+  "files": [
+    "index.d.ts",
+    "manifest.d.ts",
+    "README.md"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShunyuYao/pet-plugin-types.git"
+  },
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "petSdk": {
+    "apiVersion": null,
+    "frozen": false,
+    "note": "apiVersion 待宿主 US-PP09 落地、冻结集待 US-PP07 拍板后填写"
+  }
+}
