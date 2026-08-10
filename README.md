@@ -79,6 +79,37 @@ export const activate: ActivateFn = async (pet) => {
 | `manifest.d.ts` | `manifest.json` 的类型，与宿主 `manifest.js` 校验规则一一对应（含 `apiVersion`、权限字面量联合） |
 | `index.d.ts` | `pet.*` SDK 全部 A/B 档方法的签名、返回类型与权限标注 |
 
+### manifest 的条件校验会在编译期生效
+
+宿主 `loadManifest` 的四条条件规则已建模进类型，用 `definePluginManifest`
+（或 `satisfies PluginManifest<...>`）构造 manifest 时，写错在编译期就报错，
+不用等到装进宿主才发现：
+
+```ts
+import { definePluginManifest } from '@pet/plugin-types/manifest';
+
+// ✅ kind 含 tool，entry.tool 已给
+definePluginManifest({
+  id: 'demo', name: '示例', version: '1.0.0', apiVersion: 1,
+  kind: ['tool'], entry: { tool: 'tool.js' },
+});
+
+// ❌ 编译期报错：Property 'tool' is missing —— 宿主会抛「kind 含 tool 时 entry.tool 必填」
+definePluginManifest({
+  id: 'demo', name: '示例', version: '1.0.0', kind: ['tool'], entry: {},
+});
+```
+
+被建模的四条：`kind` 含 `tool`/`panel`/`dashboard-card` 时对应 `entry` 必填，
+含 `service` 时 `provides.service` 必填。另外 `entry.skills` 是**单个路径字符串**
+（宿主直接拿去 `path.join`，传数组会抛 `TypeError`），类型里不接受 `string[]`。
+
+### 判空要用 `null`
+
+`secrets.get(key)` 未命中时返回 **`null`**（宿主 `SecretStore.get()` 的四条 miss
+路径——键不存在、safeStorage 不可用、解密失败、`plain:` 回退未放行——全部
+`return null`）。写 `=== undefined` 判空会漏。
+
 ## 三上下文能力矩阵
 
 插件代码可能跑在三种上下文里，可用的命名空间**不一致**。下表差异**全部是有意设计**，

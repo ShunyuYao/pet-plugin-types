@@ -86,11 +86,49 @@ export interface PluginEntry {
   /** kind 含 'dashboard-card' 时必填 */
   dashboardBlock?: DashboardBlockEntry;
   character?: string;
-  skills?: string | string[];
+  /**
+   * 技能目录的相对路径（**单个路径字符串，不是数组**）。缺省为 `'skills'`。
+   *
+   * 宿主 `runtime.js` 直接 `path.join(rec.dir, entry.skills || 'skills')`——
+   * 传数组会抛 `TypeError`，故此处不接受 `string[]`。
+   */
+  skills?: string;
   settings?: { title?: string; fields?: SettingsField[] };
 }
 
-export interface PluginManifest {
+/**
+ * 由 `kind` 推出的 `entry` 必填项——宿主 loadManifest 那四条条件校验的类型镜像：
+ *
+ * - `kind` 含 `'tool'` → `entry.tool` 必填（string）
+ * - `kind` 含 `'panel'` → `entry.panel.src` 必填
+ * - `kind` 含 `'dashboard-card'` → `entry.dashboardBlock.src` 必填
+ *
+ * 三者都不含时 `entry` 整体可选。
+ */
+export type RequiredEntry<K extends PluginKind> =
+  ('tool' extends K ? { tool: string } : {}) &
+  ('panel' extends K ? { panel: PanelEntry } : {}) &
+  ('dashboard-card' extends K ? { dashboardBlock: DashboardBlockEntry } : {}) &
+  PluginEntry;
+
+/** `kind` 含 `'service'` 时 `provides.service` 必填，否则整体可选。 */
+export type RequiredProvides<K extends PluginKind> =
+  'service' extends K
+    ? { provides: { service: string } }
+    : { provides?: { service: string } };
+
+/** `entry` 在 kind 含 tool/panel/dashboard-card 任一时变为必填字段，否则可选。 */
+export type EntryField<K extends PluginKind> =
+  'tool' extends K ? { entry: RequiredEntry<K> }
+  : 'panel' extends K ? { entry: RequiredEntry<K> }
+  : 'dashboard-card' extends K ? { entry: RequiredEntry<K> }
+  : { entry?: RequiredEntry<K> };
+
+/**
+ * manifest 的公共字段（与 `kind` 无关的部分）。
+ * 完整 manifest 类型见 {@link PluginManifest}。
+ */
+export interface PluginManifestBase {
   /** 必须匹配 /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/ 且不含 '..' */
   id: string;
   name: string;
@@ -109,8 +147,6 @@ export interface PluginManifest {
    * 超出宿主支持范围的插件会被置为 disabled 并写明原因，不会崩在半路。
    */
   apiVersion?: number;
-  /** 非空子集 */
-  kind: PluginKind[];
   permissions?: PluginPermission[];
   /**
    * 要消费的服务名。宿主授权时展开为 `service:<name>`。
@@ -119,7 +155,42 @@ export interface PluginManifest {
    * 第三方插件只能消费。
    */
   services?: string[];
-  /** kind 含 'service' 时必填 */
-  provides?: { service: string };
-  entry?: PluginEntry;
 }
+
+/**
+ * 一份 manifest.json 的类型。
+ *
+ * 泛型参数 `K` 是本插件声明的 kind 联合，一般**不用手写**——
+ * 用 {@link definePluginManifest} 或 `satisfies` 让 TS 从字面量里推出来，
+ * `kind` 与 `entry` 的对应关系就会被静态校验：
+ *
+ * ```ts
+ * // ✅ kind 含 tool，entry.tool 已给
+ * const m = definePluginManifest({
+ *   id: 'demo', name: '示例', version: '1.0.0', apiVersion: 1,
+ *   kind: ['tool'], entry: { tool: 'tool.js' },
+ * });
+ *
+ * // ❌ 编译期报错：kind 含 tool 却没有 entry.tool（宿主 loadManifest 会抛错）
+ * const bad = definePluginManifest({
+ *   id: 'demo', name: '示例', version: '1.0.0',
+ *   kind: ['tool'], entry: {},
+ * });
+ * ```
+ */
+export type PluginManifest<K extends PluginKind = PluginKind> =
+  PluginManifestBase & {
+    /** 非空子集 */
+    kind: K[];
+  } & RequiredProvides<K> & EntryField<K>;
+
+/**
+ * 恒等函数，唯一作用是让 TS 从 `kind` 字面量推断 `K`，从而把宿主的
+ * 「kind 含 X → entry.X 必填」校验提前到编译期。
+ *
+ * 写 `manifest.json` 时用不上（JSON 没有函数），但用 TS/JS 生成 manifest、
+ * 或在测试里构造 manifest 时，这是拿到静态校验的方式。
+ */
+export declare function definePluginManifest<K extends PluginKind>(
+  manifest: PluginManifest<K>
+): PluginManifest<K>;

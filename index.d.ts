@@ -71,8 +71,14 @@ export interface PetStorage {
  * 上下文：**仅 tool**（panel 与 dashboard-card 上不存在，属有意设计）
  */
 export interface PetSecrets {
-  /** 读一条凭据；不存在返回 `undefined`。 */
-  get(key: string): Promise<string | undefined>;
+  /**
+   * 读一条凭据；**不存在返回 `null`**（不是 `undefined`）。
+   *
+   * 宿主 `SecretStore.get()` 的四条 miss 路径——键不存在、safeStorage 不可用、
+   * 解密失败、`plain:` 回退未被 `PET_ALLOW_INSECURE_SECRET_STORAGE=1` 放行——
+   * 一律 `return null`。判空写 `=== null` 或 `== null`，别写 `=== undefined`。
+   */
+  get(key: string): Promise<string | null>;
   set(key: string, value: string): Promise<void>;
   delete(key: string): Promise<void>;
 }
@@ -522,6 +528,12 @@ export interface CalendarProviderSpec {
  * 上下文：**仅 tool**
  */
 export interface PetCalendar {
+  /**
+   * @experimental 注册日历数据源。签名/语义可能在任一 apiVersion 变更，不走废弃流程。
+   *
+   * 权限：`calendar-provider`（@experimental）
+   * 上下文：**仅 tool**（handler 需长驻，渲染层窗口一关即失活）
+   */
   registerProvider(spec: CalendarProviderSpec): void;
 }
 
