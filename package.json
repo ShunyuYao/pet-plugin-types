@@ -1,6 +1,6 @@
 {
   "name": "@pet/plugin-types",
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0-rc.3",
   "description": "桌宠（吐梨邦）插件 SDK 的 TypeScript 类型定义。SDK surface 的唯一权威文档，对应 apiVersion 1。",
   "types": "index.d.ts",
   "files": [

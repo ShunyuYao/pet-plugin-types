@@ -10,6 +10,35 @@
 
 **当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 12 个标 `@experimental`。
 
+
+## ⚠️ v4 破坏性变更：好友主键从 petId 改为账号 UID
+
+宿主 v4 起，对外身份主键是**账号级 TULI-UID**，`petId` 降级为埋点设备指纹。
+方法签名没变，变的是值：
+
+| | 变更 |
+|---|---|
+| `me()` | 新增 `uid`（未登录为 `''`）；`petId` 仍返回但已 `@deprecated` |
+| `list()` | 每项新增 `uid`；存量未迁移的好友为 `''` |
+| `isFriend(key)` | `key` 现在接受 UID 或 petId，灰度期两种键并存 |
+
+**插件迁移写法**（一行搞定，同时兼容登录态与游客态）：
+
+```ts
+const me = await pet.friends.me();
+const myKey = me.uid || me.petId;               // 登录用 UID，游客回落 petId
+
+const friends = await pet.friends.list();
+const keys = friends.map(f => f.uid || f.petId);
+```
+
+**为什么改**：`petId` 是本机随机生成的，换电脑/重装就变，且一人多设备会变成多个身份——
+拿它当好友主键，用户换台机器好友就全丢了。UID 跟账号走，跨设备稳定。
+
+存量好友关系不需要插件做任何事：宿主会在双方登录后随好友信令自动补上 `uid`，
+迁移完成前 `uid` 为空串，按上面的回落写法即可平滑过渡。
+
+
 ## 三档承诺
 
 | 档位 | 标记 | 承诺 |
@@ -132,7 +161,7 @@ definePluginManifest({
 | `settings.get` | 无 | A | ✅ | ✅ | ✅ |
 | `ai.chat` | `ai` | B | ✅ | ✅ | ✅ |
 | `files.*`（7 个） | `files` | B | ✅ | ✅ | ❌ |
-| `friends.me/list/isFriend/avatar` | `friends` | A | ✅ | ✅ | ✅ |
+| `friends.me/list/isFriend/avatar` | `friends` | A | ✅ | ✅ | ✅ |  ⚠️ v4 主键改 UID，见下
 | `activity.getLatest/connectionInfo` | `activity` | B | ✅ | ✅ | ✅ |
 | `dashboard.requestHeight/notifyReady` | `dashboard` | A | ✅ | ❌ | ✅ |
 | `tools.register` | `tools` | A | ✅ | ❌ | ❌ |

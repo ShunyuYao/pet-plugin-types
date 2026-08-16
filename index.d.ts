@@ -401,7 +401,20 @@ export interface PetFiles {
 
 /** 好友条目。宿主可能加字段（加字段不破坏契约）。 */
 export interface Friend {
-  /** 全平台寻址标识。 */
+  /**
+   * 账号级 UID（TULI-UID 的数字本体，字符串形式）——**好友关系的主键**。
+   *
+   * 存量好友在对端登录并完成迁移前为空串 `''`，此时回落 {@link Friend.petId}。
+   * 取寻址键的惯用写法：`const key = f.uid || f.petId`。
+   */
+  uid?: string;
+  /**
+   * 设备级标识。
+   *
+   * @deprecated 自宿主 v4 起降级为埋点设备指纹，**不再是好友主键**，
+   * 也不再是中转寻址依据。新代码请用 {@link Friend.uid}；此字段仅供
+   * 灰度期回落与存量数据兼容，未来可能移除。
+   */
   petId: string;
   nickname: string;
   /** 加为好友的时间戳（ms）。 */
@@ -410,6 +423,16 @@ export interface Friend {
 
 /** {@link PetFriends.me} 的回传。 */
 export interface MeInfo {
+  /**
+   * 本机账号 UID（对外身份主键）。**未登录时为空串** `''`——
+   * 游客态下桌宠仍可用局域网功能，插件需自行处理这种情况。
+   */
+  uid: string;
+  /**
+   * 本机设备标识。
+   *
+   * @deprecated 同 {@link Friend.petId}：v4 起仅为埋点设备指纹，不再是身份主键。
+   */
   petId: string;
   nickname: string;
 }
@@ -427,10 +450,20 @@ export interface AvatarInfo {
  * 上下文：tool / panel / dashboard-card
  */
 export interface PetFriends {
-  /** 本机身份。`petId` 是中转寻址的唯一依据。 */
+  /**
+   * 本机身份。`uid` 是账号主键与中转寻址依据；未登录时 `uid` 为空串。
+   *
+   * @example
+   * const me = await pet.friends.me();
+   * const myKey = me.uid || me.petId;   // 登录用 UID，游客回落 petId
+   */
   me(): Promise<MeInfo>;
   list(): Promise<Friend[]>;
-  isFriend(petId: string): Promise<boolean>;
+  /**
+   * 判断是否好友。`key` 接受账号 UID 或存量 petId——
+   * 灰度期两种键并存，宿主统一判定。
+   */
+  isFriend(key: string): Promise<boolean>;
   /** 本机桌宠头像（用户上传的，或当前角色 idle 首帧）。 */
   avatar(): Promise<AvatarInfo>;
 }
