@@ -168,6 +168,12 @@ export interface TaskCheckResult {
  */
 export interface PetUi {
   /**
+   * @experimental C 档（closed）：**仅内置插件可用**，第三方插件调用会被权限门拒绝。
+   * 权限：`ui:theme`。上下文：仅 `tool`。
+   * 列在此处是为了让契约与宿主 sdk-surface 完全对齐，不代表对第三方开放。
+   */
+  injectStyle(css: string): Promise<unknown>;
+  /**
    * 确认框。
    * 上下文：tool / panel / dashboard-card
    */
@@ -385,9 +391,10 @@ export interface PetFiles {
   open(path: string): Promise<unknown>;
   /**
    * @experimental **撤销该路径的授权，不删除磁盘上的文件。**
-   * 名字有歧义，将来大概率改名 `revoke`——这正是它不能进冻结集的原因。
+   *
+   * 宿主已完成改名（原名 `remove` 语义有歧义，容易被读成删文件）。
    */
-  remove(path: string): Promise<true>;
+  revoke(path: string): Promise<true>;
   /** @experimental 把某个已授权的根路径声明为主对话自动挂载，附一句用途 hint（≤300 字）。 */
   pin(path: string, options?: { hint?: string }): Promise<true>;
   /** @experimental 取消常驻。 */
