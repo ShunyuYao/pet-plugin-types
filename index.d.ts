@@ -11,16 +11,16 @@
  * |---|---|---|
  * | A 冻结 | 无标记 | 同一 `apiVersion` 内**只加不改不删**；废弃需先标 deprecated 并保留 ≥2 个宿主版本 |
  * | B 实验 | `@experimental` | 可用，但**签名/语义可能在任一 apiVersion 变更，且不走废弃流程** |
- * | C 不开放 | 不在本文件中 | 运行时可能仍有实现（内置插件在用），但不作为对外契约，第三方不得依赖 |
+ * | C 不开放 | 不在公开根对象中 | 运行时可能仍有实现（内置插件在用），但不作为对外契约，第三方不得依赖 |
  *
  * 本文件当前对应 `apiVersion: 1`（见 package.json 的 `petSdk`）。
- * A 档共 30 条、B 档 12 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
- * `services.provide`、`auth.openAuthWindow`、`pet.host.*`）**已从本文件删除**。
+ * A 档共 30 条、B 档 24 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
+ * `services.provide`、`auth.openAuthWindow`、`pet.host.*`）**不在公开根对象中**。
  *
- * ## 返回值一律是 Promise
+ * ## 返回值与注册方法
  *
- * 宿主内部有两条实现路径：内置插件在主进程内直调（同步返回），第三方插件经 RPC/IPC
- * 往返（Promise）。**契约面统一声明为 `Promise<T>`**——`await` 在两种形态下都正确。
+ * 内置和外部 tool 均经 RPC，panel/block 经 IPC；普通调用返回 Promise。
+ * 桥内注册（events.on / tools.register / calendar.registerProvider）返回 void。
  *
  * ## 上下文差异
  *
@@ -105,9 +105,105 @@ export interface PetSurface {
   speak(text: string): Promise<boolean>;
 }
 
+/** @experimental 徽标色调。 */
+export type BadgeTone = 'primary' | 'warning' | 'success' | 'danger' | 'muted';
+/** @experimental 每段文本最多 4 个 Unicode 码点，由宿主运行时检查。 */
+export interface BadgeSegment { tone: BadgeTone; text: string; }
+/** @experimental 1–2 段；点击仅支持打开本插件面板，另需 ui 权限和 panel 入口。 */
+export interface BadgeOptions {
+  segments: [BadgeSegment] | [BadgeSegment, BadgeSegment];
+  onClick?: 'openPanel';
+}
+/**
+ * @experimental 宠物脚下常驻徽标；仅 tool，复用 pet 权限。
+ * 同时只允许一个插件占用；插件退出/卸载时宿主清除。宿主 0.19.1 起可用。
+ */
+export interface PetBadge {
+  /** @experimental 无可用宠物窗、名额被占或输入非法时返回 false。 */
+  set(options: BadgeOptions): Promise<boolean>;
+  /** @experimental 无本插件持有的徽标时返回 false。 */
+  clear(): Promise<boolean>;
+}
+
+/** @experimental 宿主只接受下列轮询与容量选项。 */
+export interface ClipboardHistoryOptions {
+  /** 默认 1000ms，最小 250ms。 */
+  pollIntervalMs?: number;
+  /** pollIntervalMs 的兼容别名；两者都有时前者优先。 */
+  intervalMs?: number;
+  /** 默认 1GiB，范围 1KiB–4GiB，超额淘汰最旧记录。 */
+  maxBytes?: number;
+}
+/** @experimental */
+export interface ClipboardQueryOptions {
+  type?: 'all' | 'text' | 'image';
+  search?: string;
+  offset?: number;
+  /** 默认 50，最大 500。 */
+  limit?: number;
+}
+/** @experimental 查询只返回元信息，不含全文或图片磁盘路径。 */
+export interface ClipboardEntry {
+  id: string;
+  type: 'text' | 'image';
+  capturedAt: number;
+  referencedAt: number | null;
+  preview?: string;
+  name?: string;
+}
+/** @experimental */
+export interface ClipboardQueryResult {
+  items: ClipboardEntry[];
+  total: number;
+  offset: number;
+  limit: number;
+  bytes: number;
+  revision: number;
+}
+/** @experimental 图片 read 返回 base64 缩略图，不是原图或文件路径。 */
+export type ClipboardReadResult =
+  | (ClipboardEntry & { type: 'text'; plain: string; html: string; rtf: string })
+  | (ClipboardEntry & { type: 'image'; thumbnail: string; thumbnailMimeType: 'image/png' });
+/** @experimental 剪贴板历史；clipboard 权限。tool 拥有全部方法，panel 不拥有轮询启停。 */
+export interface PetClipboard {
+  /** @experimental 仅 tool；已在轮询时返回 false。 */
+  startHistory(options?: ClipboardHistoryOptions): Promise<boolean>;
+  /** @experimental 仅 tool；未在轮询时返回 false。 */
+  stopHistory(): Promise<boolean>;
+  /** @experimental 元信息分页；最近引用的条目排在前。 */
+  query(options?: ClipboardQueryOptions): Promise<ClipboardQueryResult>;
+  /** @experimental 非法或不存在的 id 会拒绝 Promise。 */
+  read(id: string): Promise<ClipboardReadResult>;
+  /** @experimental 复制历史内容到系统剪贴板，并标记引用时间。 */
+  copy(id: string): Promise<boolean>;
+  /** @experimental 更新引用时间。 */
+  markReferenced(id: string): Promise<boolean>;
+  /** @experimental 删除本插件的一条历史；不存在返回 false。 */
+  remove(id: string): Promise<boolean>;
+  /** @experimental 清空本插件的历史记录。 */
+  clearHistory(): Promise<boolean>;
+}
+/** @experimental 来源与预览必须配对，不支持任意本地文件路径。 */
+export type ComposeFileOptions =
+  | { source: { type: 'generated'; mimeType: 'text/markdown'; content: string; name?: string };
+      preview: { type: 'markdown'; text: string } }
+  | { source: { type: 'clipboard-image'; id: string; name?: string };
+      preview: { type: 'image' } };
+/** @experimental */
+export interface ComposeFileResult { action: 'sent' | 'cancelled'; }
+/** @experimental tool/panel，需 errands 权限；剪贴板图片另需 clipboard 权限。 */
+export interface PetErrands {
+  /**
+   * @experimental 打开宿主派差事卡，由用户选择收件人并发送。
+   * generated 限 Markdown 10MiB、预览 64KiB；同插件同时只允许一项待处理。
+   * 用户取消/超时返回 cancelled；校验或打开卡片失败拒绝 Promise。
+   */
+  composeFile(options: ComposeFileOptions): Promise<ComposeFileResult>;
+}
+
 // ─────────────────────────────────────────────────────────────
-// ui —— 权限：`ui`。4 冻结 + 1 实验；`ui.injectStyle`（权限 `ui:theme`）判 C 档，
-// 已从本契约删除（主题将改为语义 Token 覆写，不再是裸 CSS 注入）。
+// ui —— 权限：`ui`。4 冻结 + 2 实验；`ui.injectStyle`（权限 `ui:theme`）判 C 档，
+// 不在公开 SDK 根对象中；旧 PetUi 成员仅作声明兼容。
 // ─────────────────────────────────────────────────────────────
 
 /** {@link PetUi.dialog} 的入参。 */
@@ -127,7 +223,7 @@ export interface DialogOptions {
 
 /** {@link PetUi.dialog} 的回传。用户点确认为 `'ok'`，取消/关窗为 `'cancel'`。 */
 export interface DialogResult {
-  action: 'ok' | 'cancel';
+  action: 'ok' | 'cancel' | 'timeout';
 }
 
 /**
@@ -168,9 +264,9 @@ export interface TaskCheckResult {
  */
 export interface PetUi {
   /**
-   * @experimental C 档（closed）：**仅内置插件可用**，第三方插件调用会被权限门拒绝。
+   * @deprecated @internal C 档（closed），不属于第三方公开契约。
    * 权限：`ui:theme`。上下文：仅 `tool`。
-   * 列在此处是为了让契约与宿主 sdk-surface 完全对齐，不代表对第三方开放。
+   * 仅保留旧 PetUi 接口的类型兼容；所有公开 SDK 根对象均排除此成员。
    */
   injectStyle(css: string): Promise<unknown>;
   /**
@@ -193,6 +289,8 @@ export interface PetUi {
    * 上下文：tool / panel（dashboard-card 无意义）
    */
   closePanel(): Promise<boolean>;
+  /** @experimental tool/panel：设置本插件面板置顶；false 时失焦关闭。返回 true。 */
+  setPanelPinned(pinned: boolean): Promise<boolean>;
   /**
    * @experimental 任务完成确认卡。签名可能在任一 apiVersion 变更，不走废弃流程。
    * 上下文：tool / panel / dashboard-card
@@ -607,7 +705,10 @@ export interface PetCommon {
  */
 export interface PetTool extends PetCommon {
   secrets: PetSecrets;
-  ui: PetUi;
+  ui: Omit<PetUi, 'injectStyle'>;
+  badge: PetBadge;
+  clipboard: PetClipboard;
+  errands: PetErrands;
   scheduler: PetScheduler;
   net: PetNet;
   tools: PetTools;
@@ -626,7 +727,9 @@ export interface PetTool extends PetCommon {
  * `ui.openPanel` 在此不可用。
  */
 export interface PetPanel extends PetCommon {
-  ui: Omit<PetUi, 'openPanel'>;
+  ui: Omit<PetUi, 'openPanel' | 'injectStyle'>;
+  clipboard: Omit<PetClipboard, 'startHistory' | 'stopHistory'>;
+  errands: PetErrands;
   /** @experimental 整组不承诺 */
   files: PetFiles;
 }
@@ -638,7 +741,7 @@ export interface PetPanel extends PetCommon {
  * （区块不是 panel 窗口）；多出 `dashboard` 与 `context` 常量。
  */
 export interface PetBlock extends PetCommon {
-  ui: Omit<PetUi, 'openPanel' | 'closePanel'>;
+  ui: Omit<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'injectStyle'>;
   dashboard: PetDashboard;
   /** 区块自我标识，让同一份代码判断自己跑在哪种形态里。 */
   context: 'dashboard-block';
@@ -652,7 +755,15 @@ export interface PetBlock extends PetCommon {
  * 可选成员会强制你先做存在性判断。
  */
 export interface Pet extends PetCommon {
-  ui: PetUi;
+  ui: Omit<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'injectStyle'>
+    & Partial<Pick<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned'>>;
+  /** @experimental 仅 tool。 */
+  badge?: PetBadge;
+  /** @experimental tool/panel；轮询方法仅 tool。 */
+  clipboard?: Omit<PetClipboard, 'startHistory' | 'stopHistory'>
+    & Partial<Pick<PetClipboard, 'startHistory' | 'stopHistory'>>;
+  /** @experimental tool/panel。 */
+  errands?: PetErrands;
   /** 仅 tool 上下文 */
   secrets?: PetSecrets;
   /** 仅 tool 上下文 */

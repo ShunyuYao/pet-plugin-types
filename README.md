@@ -8,7 +8,7 @@
 > `docs/plugin-sdk-freeze-review.md`（冻结方案决定版）。两者不一致时以宿主仓库为准，
 > 本包按 bug 处理。
 
-**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 12 个标 `@experimental`。
+**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 24 个标 `@experimental`。
 
 
 ## ⚠️ v4 破坏性变更：好友主键从 petId 改为账号 UID
@@ -45,19 +45,19 @@ const keys = friends.map(f => f.uid || f.petId);
 |---|---|---|
 | **A 冻结** | 无标记 | 同一 `apiVersion` 内**只加不改不删**；废弃需先标 deprecated 并保留 ≥2 个宿主版本 |
 | **B 实验** | `@experimental` | 可用，但**签名/语义可能在任一 apiVersion 变更，且不走废弃流程** |
-| **C 不开放** | 不在本包中 | 运行时可能仍有实现（内置插件在用），但不作为对外契约，第三方不得依赖 |
+| **C 不开放** | 不在公开根对象中 | 运行时可能仍有实现（内置插件在用），但不作为对外契约，第三方不得依赖 |
 
 B 档方法的变更**不**强制升 `apiVersion`（这正是 `@experimental` 的含义）；A 档方法的
 语义变更必须升。
 
-从本包删除的 C 档能力：`ui.injectStyle`（主题将改为语义 Token 覆写，不再是裸 CSS 注入）、
+公开 SDK 根对象排除的 C 档能力：`ui.injectStyle`（主题将改为语义 Token 覆写，不再是裸 CSS 注入）、
 `pet.meetingCard`（将被声明式聊天卡片 API 泛化）、`services.provide`（当前仅内置插件可用）、
 `auth.openAuthWindow` 与 `pet.host.*`（内置特权面，属后续降权对象）。
 
-## 返回值一律是 Promise
+## 返回值与注册方法
 
-宿主内部有两条实现路径：内置插件在主进程内直调（同步返回），第三方插件经 RPC/IPC 往返
-（Promise）。**契约面统一声明为 `Promise<T>`**——`await` 在两种形态下都正确。
+内置和外部 tool 均经 RPC，panel/block 经 IPC；普通调用返回 `Promise<T>`。
+桥内注册方法 `events.on`、`tools.register`、`calendar.registerProvider` 返回 `void`。
 
 ## 不发 npm
 
@@ -144,29 +144,64 @@ definePluginManifest({
 插件代码可能跑在三种上下文里，可用的命名空间**不一致**。下表差异**全部是有意设计**，
 不是漏做：
 
-| 命名空间.方法 | 权限 | 档 | `tool` | `panel` | `dashboard-card` |
-|---|---|:--:|:--:|:--:|:--:|
-| `storage.get/set/delete/all` | `storage` | A | ✅ | ✅ | ✅ |
-| `secrets.get/set/delete` | `secrets` | A | ✅ | ❌ | ❌ |
-| `pet.bubble/playAnim/speak` | `pet` | A | ✅ | ✅ | ✅ |
-| `ui.dialog` | `ui` | A | ✅ | ✅ | ✅ |
-| `ui.copyText` | `ui` | A | ✅ | ✅ | ✅ |
-| `ui.openPanel` | `ui` | A | ✅ | ❌ | ❌ |
-| `ui.closePanel` | `ui` | A | ✅ | ✅ | ❌ |
-| `ui.taskCheck` | `ui` | B | ✅ | ✅ | ✅ |
-| `events.on/emit` | `events` | A | ✅ | ✅ | ✅ |
-| `scheduler.every/daily/cancel` | `scheduler` | A | ✅ | ❌ | ❌ |
-| `net.fetch` | `net:<hostname>` | A | ✅ | ❌ | ❌ |
-| `services.get` | `service:<name>` | A | ✅ | ✅ | ✅ |
-| `settings.get` | 无 | A | ✅ | ✅ | ✅ |
-| `ai.chat` | `ai` | B | ✅ | ✅ | ✅ |
-| `files.*`（7 个） | `files` | B | ✅ | ✅ | ❌ |
-| `friends.me/list/isFriend/avatar` | `friends` | A | ✅ | ✅ | ✅ |  ⚠️ v4 主键改 UID，见下
-| `activity.getLatest/connectionInfo` | `activity` | B | ✅ | ✅ | ✅ |
-| `dashboard.requestHeight/notifyReady` | `dashboard` | A | ✅ | ❌ | ✅ |
-| `tools.register` | `tools` | A | ✅ | ❌ | ❌ |
-| `calendar.registerProvider` | `calendar-provider` | B | ✅ | ❌ | ❌ |
-| `context`（字符串常量） | 无 | A | ❌ | ❌ | ✅ |
+<!-- sdk-surface:start -->
+| 命名空间 | 方法 | tool | panel | dashboard-card |
+|---|---|:--:|:--:|:--:|
+| `storage` | `get` | A | A | A |
+| `storage` | `set` | A | A | A |
+| `storage` | `delete` | A | A | A |
+| `storage` | `all` | A | A | A |
+| `secrets` | `get` | A | — | — |
+| `secrets` | `set` | A | — | — |
+| `secrets` | `delete` | A | — | — |
+| `pet` | `bubble` | A | A | A |
+| `pet` | `playAnim` | A | A | A |
+| `pet` | `speak` | A | A | A |
+| `badge` | `set` | B | — | — |
+| `badge` | `clear` | B | — | — |
+| `ui` | `dialog` | A | A | A |
+| `ui` | `taskCheck` | B | B | B |
+| `ui` | `copyText` | A | A | A |
+| `ui` | `openPanel` | A | — | — |
+| `ui` | `closePanel` | A | A | — |
+| `ui` | `setPanelPinned` | B | B | — |
+| `events` | `on` | A | A | A |
+| `events` | `emit` | A | A | A |
+| `scheduler` | `every` | A | — | — |
+| `scheduler` | `daily` | A | — | — |
+| `scheduler` | `cancel` | A | — | — |
+| `net` | `fetch` | A | — | — |
+| `services` | `get` | A | A | A |
+| `settings` | `get` | A | A | A |
+| `ai` | `chat` | B | B | B |
+| `files` | `pick` | B | B | — |
+| `files` | `stat` | B | B | — |
+| `files` | `open` | B | B | — |
+| `files` | `list` | B | B | — |
+| `files` | `revoke` | B | B | — |
+| `files` | `pin` | B | B | — |
+| `files` | `unpin` | B | B | — |
+| `clipboard` | `startHistory` | B | — | — |
+| `clipboard` | `stopHistory` | B | — | — |
+| `clipboard` | `query` | B | B | — |
+| `clipboard` | `read` | B | B | — |
+| `clipboard` | `copy` | B | B | — |
+| `clipboard` | `markReferenced` | B | B | — |
+| `clipboard` | `remove` | B | B | — |
+| `clipboard` | `clearHistory` | B | B | — |
+| `errands` | `composeFile` | B | B | — |
+| `friends` | `me` | A | A | A |
+| `friends` | `list` | A | A | A |
+| `friends` | `isFriend` | A | A | A |
+| `friends` | `avatar` | A | A | A |
+| `activity` | `getLatest` | B | B | B |
+| `activity` | `connectionInfo` | B | B | B |
+| `dashboard` | `requestHeight` | A | — | A |
+| `dashboard` | `notifyReady` | A | — | A |
+| `tools` | `register` | A | — | — |
+| `calendar` | `registerProvider` | B | — | — |
+| `(root)` | `context` | — | — | A |
+<!-- sdk-surface:end -->
 
 裁剪理由（一句话版）：
 
@@ -197,6 +232,45 @@ definePluginManifest({
 可以读写你电脑上的文件、联网、执行程序。**只安装你完全信任的来源。**
 
 宿主已把旁加载入口放在「开发者模式」开关之后，开启开关与每次安装前都会再次告知风险。
+
+## 本轮同步与兼容
+
+对应宿主 GitHub main `e6d8fa86505d5a3eb79ffaaa1abf46656d6a1e66`（0.19.1 源码）。
+`apiVersion` 保持 1；补齐实验能力不表示旧宿主已经提供这些方法。
+
+- `badge.set/clear` 仅 tool，权限 `pet`；点击打开面板还需 `ui` 与 panel 入口。
+  段数 1–2，每段最多 4 个 Unicode 码点，点击只支持 `openPanel`，无任意事件回调。
+  徽标支持以宿主 0.19.1 为基线；0.19.0 发布构建不包含该能力。
+- `ui.setPanelPinned` 仅 tool/panel；`clipboard` 的轮询启停仅 tool，其余历史操作供 tool/panel；
+  `errands.composeFile` 供 tool/panel，由用户在宿主卡片里选择好友并发送。
+- 剪贴板历史必须声明 `clipboard`；文件派送必须声明 `errands`，图片历史来源另需 `clipboard`。
+- `PetUi.injectStyle` 只保留旧接口声明兼容，标为 internal/deprecated；公开根对象均不可访问。
+- `manifest.activation: 'opt-in'` 是插件启用策略，**不是更新开关**。本次没有新增更新接口或更新参与字段。
+- 依赖新能力时声明实际最低宿主版本；可降级的功能先检查成员是否存在，再调用。
+
+## 验证与交付门禁
+
+安装开发依赖后：
+
+```sh
+npm ci
+npm test
+PET_PLUGIN_HOST_DIR=/path/to/desktop-pet/demo npm run test:delivery
+```
+
+`npm test` 是离线编译正反例，验证合法调用与非法上下文/参数。
+`test:delivery` 必须提供本地宿主源码，完整比对三种上下文的公开方法、参数数量、实验标记、
+包内计数和本 README 表格，并用真实宿主校验 manifest。宿主缺失直接失败，**不会 SKIP**。
+网络准备与离线门禁分开；交付时先固定并记录宿主提交，再运行测试。
+
+同步脚手架文档也必须对账：
+
+```sh
+PET_PLUGIN_HOST_DIR=/path/to/desktop-pet/demo npm run test:host -- --readme /path/to/create-pet-plugin/README.md
+```
+
+这道门禁位于公开类型仓库。宿主旧的可选对账仍可能 SKIP，不能代替此交付检查。
+方法数量和参数数量检查不替代语义/返回值测试；新能力同时要有类型正反例与宿主行为证据。
 
 ## 相关
 

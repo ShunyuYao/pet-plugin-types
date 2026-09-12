@@ -1,6 +1,6 @@
 {
   "name": "@pet/plugin-types",
-  "version": "1.0.0-rc.3",
+  "version": "1.0.0-rc.4",
   "description": "桌宠（吐梨邦）插件 SDK 的 TypeScript 类型定义。SDK surface 的唯一权威文档，对应 apiVersion 1。",
   "types": "index.d.ts",
   "files": [
@@ -21,7 +21,16 @@
     "apiVersion": 1,
     "frozen": true,
     "frozenMethods": 30,
-    "experimentalMethods": 12,
-    "note": "A 档 30 条已冻结（同一 apiVersion 内只加不改不删）；标 @experimental 的 12 条不受兼容承诺约束，签名可能在任一 apiVersion 变更。分档依据见宿主 docs/plugin-sdk-freeze-review.md，方法清单以宿主 demo/core/plugin-runtime/sdk-surface.js 为准。"
+    "experimentalMethods": 24,
+    "note": "与宿主 sdk-surface.js 的 30 条 frozen / 24 条 experimental 公开能力对齐；不暴露 closed 能力。"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "test:types": "tsc -p tsconfig.test.json",
+    "test:host": "node test/check-host.js",
+    "test": "npm run test:types",
+    "test:delivery": "npm run test:types && npm run test:host"
   }
 }

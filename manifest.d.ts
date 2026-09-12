@@ -47,7 +47,9 @@ export type ExperimentalPermission =
   | 'ai'
   | 'files'
   | 'activity'
-  | 'calendar-provider';
+  | 'calendar-provider'
+  | 'clipboard'
+  | 'errands';
 
 /**
  * 权限名的字面量联合（A 档 + B 档）。
@@ -63,6 +65,8 @@ export interface PanelEntry {
   width?: number;
   height?: number;
   title?: string;
+  /** 宿主 panel 透明背景配置；与页面样式共同决定显示效果。 */
+  transparent?: boolean;
 }
 
 export interface DashboardBlockEntry {
@@ -147,6 +151,8 @@ export interface PluginManifestBase {
    * 超出宿主支持范围的插件会被置为 disabled 并写明原因，不会崩在半路。
    */
   apiVersion?: number;
+  /** 内置插件需用户选择启用；与更新策略无关。 */
+  activation?: 'opt-in';
   permissions?: PluginPermission[];
   /**
    * 要消费的服务名。宿主授权时展开为 `service:<name>`。
