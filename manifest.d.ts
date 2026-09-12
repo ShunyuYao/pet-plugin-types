@@ -153,6 +153,8 @@ export interface PluginManifestBase {
   apiVersion?: number;
   /** 内置插件需用户选择启用；与更新策略无关。 */
   activation?: 'opt-in';
+  /** @experimental 参与宿主登录后的新版提醒。缺省 false；true 仍须用户逐次确认才下载安装。 */
+  updateReminders?: boolean;
   permissions?: PluginPermission[];
   /**
    * 要消费的服务名。宿主授权时展开为 `service:<name>`。

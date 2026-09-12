@@ -76,6 +76,9 @@ try {
   const check = value => { fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(value)); return manifest.loadManifest(dir); };
   const loaded = check(base);
   assert.equal(loaded.entry.panel.transparent, true);
+  assert.notEqual(loaded.updateReminders, true);
+  for (const updateReminders of [true, false]) assert.equal(check({ ...base, updateReminders }).updateReminders, updateReminders);
+  for (const updateReminders of ['true', 1, null, {}]) assert.throws(() => check({ ...base, updateReminders }), /updateReminders/);
   for (const permission of ['clipboard', 'errands']) assert(manifest.requestedGrants(loaded).includes(permission));
   assert.throws(() => check({ ...base, activation: true }), /activation/);
   assert.throws(() => check({ ...base, entry: { ...base.entry, panel: { src: 'panel.html', transparent: 'yes' } } }), /transparent/);

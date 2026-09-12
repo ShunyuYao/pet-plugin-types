@@ -276,3 +276,18 @@ PET_PLUGIN_HOST_DIR=/path/to/desktop-pet/demo npm run test:host -- --readme /pat
 
 - 插件市场登记表：[pet-plugin-registry](https://github.com/ShunyuYao/pet-plugin-registry)
 - 脚手架：[create-pet-plugin](https://github.com/ShunyuYao/create-pet-plugin)
+
+## 插件选择参与新版提醒（实验，宿主开发中）
+
+在 manifest 中显式声明 `"updateReminders": true`，允许宿主登录后检查并提示新版。
+缺省或 false 都关闭，现有插件不会因宿主升级被自动开启。三种模板均默认 false。
+权威来自本机已安装 manifest；市场条目或远端新版的声明不能替旧版开启。
+
+true 只允许自动检查和提醒，**每次下载、安装仍需用户在宿主弹窗点击更新**。
+取消、关闭、超时不下载；关闭参与不影响已有手动市场更新入口。
+登录范围为恢复已有登录及手动登录成功，等待引导结束；游客不主动提醒。
+同插件同目标版本 24 小时最多提醒一次，冷却在重启后保留。
+首期没有运行时设置接口，也不向插件开放自行安装或绕过确认的方法。
+
+这是可选的向前兼容字段，`apiVersion` 仍为 1；旧宿主忽略提醒声明。
+宿主实现尚未发版，请以包含此功能的实际宿主构建为准，不能仅根据本包版本判断可用。

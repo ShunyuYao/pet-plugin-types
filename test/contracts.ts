@@ -70,10 +70,13 @@ tool.errands.composeFile({ source: { type: 'file', path: '/tmp/a' }, preview: { 
 block.errands.composeFile(generated);
 
 definePluginManifest({ id: 'sample', name: 'Sample', version: '1.0.0', kind: ['tool', 'panel'],
-  activation: 'opt-in', permissions: ['clipboard', 'errands'],
+  activation: 'opt-in', updateReminders: true, permissions: ['clipboard', 'errands'],
   entry: { tool: 'index.js', panel: { src: 'panel.html', transparent: true } },
 });
 // @ts-expect-error Transparent must be boolean.
 definePluginManifest({ id: 'sample', name: 'Sample', version: '1.0.0', kind: ['panel'], entry: { panel: { src: 'panel.html', transparent: 'yes' } } });
 // @ts-expect-error Tool entry is required.
 definePluginManifest({ id: 'sample', name: 'Sample', version: '1.0.0', kind: ['tool'], entry: {} });
+
+// @ts-expect-error Update reminders require an explicit boolean.
+definePluginManifest({ id: 'sample', name: 'Sample', version: '1.0.0', kind: ['skill'], entry: {}, updateReminders: 'true' });
