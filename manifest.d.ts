@@ -45,6 +45,7 @@ export type FrozenPermission =
  */
 export type ExperimentalPermission =
   | `account:authorize:${string}`
+  | 'appearance'
   | 'ai'
   | 'files'
   | 'activity'

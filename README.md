@@ -8,7 +8,7 @@
 > `docs/plugin-sdk-freeze-review.md`（冻结方案决定版）。两者不一致时以宿主仓库为准，
 > 本包按 bug 处理。
 
-**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 24 个标 `@experimental`。
+**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 29 个标 `@experimental`。
 
 
 ## ⚠️ v4 破坏性变更：好友主键从 petId 改为账号 UID
@@ -147,6 +147,9 @@ definePluginManifest({
 <!-- sdk-surface:start -->
 | 命名空间 | 方法 | tool | panel | dashboard-card |
 |---|---|:--:|:--:|:--:|
+| `appearance` | `getState` | B | B | — |
+| `appearance` | `apply` | B | B | — |
+| `appearance` | `reset` | B | B | — |
 | `account` | `getState` | B | — | — |
 | `account` | `authorize` | B | — | — |
 | `storage` | `get` | A | A | A |
@@ -306,3 +309,24 @@ Games must keep their own session in the tool process and send only display data
 Errors are returned as `Error.message`: `not_logged_in`, `permission_denied`, `service_unavailable`, `account_changed`, `network`, `invalid_request`, `busy`, `plugin_inactive`, `rate_limited`. Missing service registration fails closed; there is no fallback login or arbitrary authorization URL.
 
 开发交付须同时检查宿主、类型包、脚手架及 registry 的 SDK / 权限政策；类型包与脚手架都运行带实际宿主路径的 `test:delivery`，缺依赖跳过不算通过。Only update registry plugin entries when an actual compatible plugin package is released.
+
+## 插件外观 / Plugin appearance（experimental，尚未发布）
+
+`pet.appearance.getState()`、`apply()`、`reset()` 仅 tool/panel 可用，要求已激活的 asset 插件声明并获准 `appearance` 权限；面板另需 `ui` 权限和 panel 入口。基础模板不自动申请这些权限。
+
+返回 `companion: {key,name}`、`current: {key,name,isDefault,ownedByCaller}`、`own: {key,name}`、`canRestore`。查询不修改状态；面板打开期间刷新状态并丢弃迟到响应。`apply()` 只使用本插件注册的素材，保留当前伙伴身份、名字、人设与记忆，重启保留选择。`reset()` 只在本插件外观仍生效时恢复原伙伴外观；用户已换为 B 插件时 A 的 reset 不改变 B，也不恢复之前的其他插件外观。
+
+All three methods take no arguments and return `Promise<AppearanceState>`. They expose no host configuration, memory, credentials or disk paths. Successful apply/reset acknowledges a persisted selection; the renderer paints asynchronously. A failed write rejects with `persistence_failed` and restores the in-memory selection. Installation and local preview must not silently apply a skin. Closing a panel preserves the selection; removing or disabling the active asset restores the companion's original appearance.
+
+Errors in `Error.message`: `permission_denied`, `unsupported_context`, `appearance_unavailable`, `plugin_inactive`, `invalid_request`, `method_not_found`, `persistence_failed`. Only the owning active asset can change its appearance; dashboard blocks have no appearance API. Handle errors visibly and offer retry.
+
+当前新增接口尚未发布，`apiVersion: 1` 不能代表旧宿主已支持；先探测 `pet.appearance?.getState`，缺失时提示需支持该功能的测试版本。最低发布版本待真实构建验证，不能虚填 `minHostVersion`。These local source changes are not a published host or npm release.
+
+```js
+// asset+panel manifest: kind: ['asset', 'panel'], permissions: ['ui', 'appearance']
+const state = await pet.appearance.getState();
+// In an explicit “Use” button handler:
+const applied = await pet.appearance.apply();
+// In an explicit “Restore” button handler, enabled only when canRestore:
+const restored = await pet.appearance.reset();
+```

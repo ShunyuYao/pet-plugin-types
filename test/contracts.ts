@@ -99,3 +99,23 @@ block.account.authorize({});
 // @ts-expect-error S256 challenge is required.
 tool.account.authorize({ serviceId: 'example-ranking', challengeId: 'attempt' });
 definePluginManifest({ id: 'account-test', name: 'Account Test', version: '1.0.0', kind: ['tool'], entry: { tool: 'index.js' }, permissions: ['account:authorize:example-ranking'] });
+
+const appearance: Promise<import('../index').AppearanceState> = panel.appearance.getState();
+tool.appearance.apply();
+panel.appearance.reset().then(state => {
+  const restore: boolean = state.canRestore;
+  const name: string = state.companion.name;
+  const owner: boolean = state.current.ownedByCaller;
+  // @ts-expect-error No host config is exposed.
+  state.config;
+  // @ts-expect-error No local image paths are exposed.
+  state.own.path;
+});
+shared.appearance?.getState();
+// @ts-expect-error Blocks cannot read or change appearance.
+block.appearance.getState();
+// @ts-expect-error A plugin cannot choose another plugin's key.
+tool.appearance.apply('another-plugin');
+// @ts-expect-error reset has no arbitrary target.
+panel.appearance.reset({ key: 'another-plugin' });
+definePluginManifest({ id: 'appearance-test', name: 'Appearance', version: '0.2.0', kind: ['asset', 'panel'], permissions: ['ui', 'appearance'], entry: { character: 'character.json', panel: { src: 'panel.html' } } });

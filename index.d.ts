@@ -704,6 +704,8 @@ export interface PetCommon {
  * ```
  */
 export interface PetTool extends PetCommon {
+  /** @experimental Only this asset plugin's appearance; requires appearance permission. */
+  appearance: PetAppearance;
   /** @experimental Account delegation is available only to tools with a registered service grant. */
   account: PetAccount;
   secrets: PetSecrets;
@@ -729,6 +731,8 @@ export interface PetTool extends PetCommon {
  * `ui.openPanel` 在此不可用。
  */
 export interface PetPanel extends PetCommon {
+  /** @experimental Only this asset plugin's appearance; requires appearance permission. */
+  appearance: PetAppearance;
   ui: Omit<PetUi, 'openPanel' | 'injectStyle'>;
   clipboard: Omit<PetClipboard, 'startHistory' | 'stopHistory'>;
   errands: PetErrands;
@@ -779,6 +783,8 @@ export interface PetBlock extends PetCommon {
  * 可选成员会强制你先做存在性判断。
  */
 export interface Pet extends PetCommon {
+  /** @experimental tool/panel only. */
+  appearance?: PetAppearance;
   ui: Omit<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'injectStyle'>
     & Partial<Pick<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned'>>;
   /** @experimental 仅 tool。 */
@@ -816,3 +822,21 @@ export type ActivateFn<T = Pet> = (pet: T) => void | Promise<void>;
 
 /** 插件入口可选导出的停用钩子。插件被停用或卸载前调用。 */
 export type DeactivateFn = () => void | Promise<void>;
+
+/** @experimental Display-only snapshot. No host configuration, paths or memories. */
+export interface AppearanceState {
+  companion: { key: string; name: string };
+  current: { key: string; name: string; isDefault: boolean; ownedByCaller: boolean };
+  own: { key: string; name: string };
+  canRestore: boolean;
+}
+
+/** @experimental tool/panel; active asset plugin with appearance permission only. */
+export interface PetAppearance {
+  /** @experimental Read current state; refresh while the panel is open. */
+  getState(): Promise<AppearanceState>;
+  /** @experimental Persist this plugin's own appearance for the current companion. Identity is unchanged. */
+  apply(): Promise<AppearanceState>;
+  /** @experimental Restore the companion's original appearance only while this plugin owns it. Otherwise no-op. */
+  reset(): Promise<AppearanceState>;
+}
