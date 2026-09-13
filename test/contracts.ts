@@ -80,3 +80,22 @@ definePluginManifest({ id: 'sample', name: 'Sample', version: '1.0.0', kind: ['t
 
 // @ts-expect-error Update reminders require an explicit boolean.
 definePluginManifest({ id: 'sample', name: 'Sample', version: '1.0.0', kind: ['skill'], entry: {}, updateReminders: 'true' });
+
+tool.account.getState({ serviceId: 'example-ranking' }).then(state => {
+  const uid: string = state.uid;
+  const revision: string = state.revision;
+  // @ts-expect-error Host credentials are never public.
+  state.accessToken;
+});
+tool.account.authorize({ serviceId: 'example-ranking', challengeId: 'attempt', codeChallenge: 'S256-value' }).then(proof => {
+  const code: string = proof.code;
+  // @ts-expect-error No host refresh token is exposed.
+  proof.refreshToken;
+});
+// @ts-expect-error Account authorization is tool-only.
+panel.account.getState({ serviceId: 'example-ranking' });
+// @ts-expect-error Account authorization is tool-only.
+block.account.authorize({});
+// @ts-expect-error S256 challenge is required.
+tool.account.authorize({ serviceId: 'example-ranking', challengeId: 'attempt' });
+definePluginManifest({ id: 'account-test', name: 'Account Test', version: '1.0.0', kind: ['tool'], entry: { tool: 'index.js' }, permissions: ['account:authorize:example-ranking'] });

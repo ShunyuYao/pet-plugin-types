@@ -147,6 +147,8 @@ definePluginManifest({
 <!-- sdk-surface:start -->
 | 命名空间 | 方法 | tool | panel | dashboard-card |
 |---|---|:--:|:--:|:--:|
+| `account` | `getState` | B | — | — |
+| `account` | `authorize` | B | — | — |
 | `storage` | `get` | A | A | A |
 | `storage` | `set` | A | A | A |
 | `storage` | `delete` | A | A | A |
@@ -291,3 +293,16 @@ true 只允许自动检查和提醒，**每次下载、安装仍需用户在宿�
 
 这是可选的向前兼容字段，`apiVersion` 仍为 1；旧宿主忽略提醒声明。
 宿主实现尚未发版，请以包含此功能的实际宿主构建为准，不能仅根据本包版本判断可用。
+
+
+## Account delegation / 插件账号授权（实验，未发布）
+
+`pet.account.getState({serviceId})` 与 `pet.account.authorize({serviceId,challengeId,codeChallenge})` 仅 tool 可用，需 `account:authorize:<serviceId>` 权限，且该服务已在宿主与账号服务登记。新方法未包含在已发布宿主中；请探测能力并明确提示暂不可用，不能仅凭 apiVersion 1 推断支持，也不要虚填 minHostVersion。基础模板不自动申请这项权限。
+
+`getState` 返回本机 `signedIn / uid / revision`，UID 不是认证凭据。`authorize` 返回 60 秒内有效的一次性 `code / expiresIn / revision`；每次生成新的随机 PKCE verifier，并传 S256 挑战。仅目标服务后端可兑换授权码，插件不得读取或获取宿主 access / refresh token。
+
+Games must keep their own session in the tool process and send only display data to panels. Recheck account revision while active and before protected operations. Discard stale responses on account changes or deactivation; preserve editing drafts under their original owner. Normal account-token refresh does not change revision. The service checks the parent account session on each protected operation; grants expire within 10 minutes. Server-confirmed logout invalidates the authorization. An offline logout or failed revocation stops local requests immediately, but an existing server grant may survive until its original expiry, at most 10 minutes.
+
+Errors are returned as `Error.message`: `not_logged_in`, `permission_denied`, `service_unavailable`, `account_changed`, `network`, `invalid_request`, `busy`, `plugin_inactive`, `rate_limited`. Missing service registration fails closed; there is no fallback login or arbitrary authorization URL.
+
+开发交付须同时检查宿主、类型包、脚手架及 registry 的 SDK / 权限政策；类型包与脚手架都运行带实际宿主路径的 `test:delivery`，缺依赖跳过不算通过。Only update registry plugin entries when an actual compatible plugin package is released.

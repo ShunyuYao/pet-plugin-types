@@ -704,6 +704,8 @@ export interface PetCommon {
  * ```
  */
 export interface PetTool extends PetCommon {
+  /** @experimental Account delegation is available only to tools with a registered service grant. */
+  account: PetAccount;
   secrets: PetSecrets;
   ui: Omit<PetUi, 'injectStyle'>;
   badge: PetBadge;
@@ -732,6 +734,28 @@ export interface PetPanel extends PetCommon {
   errands: PetErrands;
   /** @experimental 整组不承诺 */
   files: PetFiles;
+}
+
+/** @experimental Safe local account snapshot; uid is an identifier, not authentication. */
+export interface PluginAccountState {
+  signedIn: boolean;
+  uid: string;
+  /** Changes on login/logout/session replacement; stable during normal token refresh. */
+  revision: string;
+}
+
+/** @experimental Short-lived, single-use proof for one registered service and PKCE challenge. */
+export interface PluginAccountAuthorization {
+  code: string;
+  expiresIn: number;
+  revision: string;
+}
+
+export interface PetAccount {
+  /** @experimental Requires account:authorize:<serviceId>; never returns host tokens. */
+  getState(options: { serviceId: string }): Promise<PluginAccountState>;
+  /** @experimental S256 PKCE required. Errors are stable codes in Error.message. */
+  authorize(options: { serviceId: string; challengeId: string; codeChallenge: string }): Promise<PluginAccountAuthorization>;
 }
 
 /**

@@ -21,8 +21,8 @@
     "apiVersion": 1,
     "frozen": true,
     "frozenMethods": 30,
-    "experimentalMethods": 24,
-    "note": "与宿主 sdk-surface.js 的 30 条 frozen / 24 条 experimental 公开能力对齐；不暴露 closed 能力。"
+    "experimentalMethods": 26,
+    "note": "30 frozen / 26 experimental public capabilities; account delegation is unreleased and tool-only."
   },
   "devDependencies": {
     "typescript": "5.9.3"
