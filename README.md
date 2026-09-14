@@ -61,7 +61,9 @@ B 档方法的变更**不**强制升 `apiVersion`（这正是 `@experimental` �
 
 ## 不发 npm
 
-本包**暂不发布到 npm**（`@pet` scope 未注册）。用 git 依赖引用：
+本包**暂不发布到 npm**，本轮也没有执行 npm 发布。源码中的 `1.0.0-rc.5` 是仓库包版本号，不表示 npm 上已有包含新增外观和动作 API 的同版本产物。新增类型随主分支源码提供；使用 git 依赖并刷新锁文件后，核对实际解析到的提交：
+
+No npm package is published by this delivery. The source version `1.0.0-rc.5` does not identify an npm artifact containing these new APIs. Consume the Git main branch and verify the commit resolved by your lockfile:
 
 ```json
 {
@@ -311,7 +313,7 @@ Errors are returned as `Error.message`: `not_logged_in`, `permission_denied`, `s
 
 开发交付须同时检查宿主、类型包、脚手架及 registry 的 SDK / 权限政策；类型包与脚手架都运行带实际宿主路径的 `test:delivery`，缺依赖跳过不算通过。Only update registry plugin entries when an actual compatible plugin package is released.
 
-## 插件外观 / Plugin appearance（experimental，尚未发布）
+## 插件外观 / Plugin appearance（experimental，主分支已实现）
 
 `pet.appearance.getState()`、`apply()`、`reset()` 仅 tool/panel 可用，要求已激活的 asset 插件声明并获准 `appearance` 权限；面板另需 `ui` 权限和 panel 入口。基础模板不自动申请这些权限。
 
@@ -321,7 +323,7 @@ All three methods take no arguments and return `Promise<AppearanceState>`. They 
 
 Errors in `Error.message`: `permission_denied`, `unsupported_context`, `appearance_unavailable`, `plugin_inactive`, `invalid_request`, `method_not_found`, `persistence_failed`. Only the owning active asset can change its appearance; dashboard blocks have no appearance API. Handle errors visibly and offer retry.
 
-当前新增接口尚未发布，`apiVersion: 1` 不能代表旧宿主已支持；先探测 `pet.appearance?.getState`，缺失时提示需支持该功能的测试版本。最低发布版本待真实构建验证，不能虚填 `minHostVersion`。These local source changes are not a published host or npm release.
+外观 API 的类型与说明已纳入本仓库主分支，对应宿主实现已完成；目标兼容构建为 **0.23.0 受邀测试版**，安装包实测仍待完成。`apiVersion: 1` 不能代表旧宿主已支持；先探测 `pet.appearance?.getState`，缺失时提示需支持该功能的测试版本。实测完成前，不能把 0.23.0 宣称为已验证的最低支持版本。宿主仅通过受邀测试渠道分发，本轮没有 npm 发布。The main branch includes the appearance API definitions/documentation for the completed host implementation. Host 0.23.0 is the target invitation-only test build; packaged-build validation is still pending. Feature-detect older hosts. This is not a public host release or an npm release, and a validated minimum host version has not yet been established.
 
 ```js
 // asset+panel manifest: kind: ['asset', 'panel'], permissions: ['ui', 'appearance']
@@ -333,11 +335,11 @@ const restored = await pet.appearance.reset();
 ```
 
 
-## 动作查询与可选素材 / Animation metadata (experimental, unreleased)
+## 动作查询与可选素材 / Animation metadata (experimental, implemented on main)
 
-新增 `pet.pet.getAnimations(): Promise<PetAnimation[]>`，tool / panel / block 均可用，需要声明并获得 `pet` 权限。无参数，查询当前实际外观；每项只有 `state`、`frameCount`、`fps`、`loop`、`standard`，对应首个素材变体，不包含路径。未加载的外观返回空数组。旧宿主须先探测 `pet.pet.getAnimations`，这些源代码变更尚未发布，不能据 apiVersion 1 推断旧宿主支持。
+新增 `pet.pet.getAnimations(): Promise<PetAnimation[]>`，tool / panel / block 均可用，需要声明并获得 `pet` 权限。无参数，查询当前实际外观；每项只有 `state`、`frameCount`、`fps`、`loop`、`standard`，对应首个素材变体，不包含路径。未加载的外观返回空数组。本仓库主分支已包含此扩展；目标宿主为 0.23.0 受邀测试构建，安装包实测待完成。旧宿主须先探测 `pet.pet.getAnimations`，不能据 apiVersion 1 或类型包版本号推断支持；本轮未发布 npm 包。
 
-The query returns the current appearance's available clips, including locally registered custom keys. It takes no arguments, requires an active plugin with the `pet` permission, and is available in tool, panel and block contexts. It exposes first-variant metadata only, with no filesystem paths. Errors include `permission_denied`, `plugin_inactive`, `unsupported_context` and `invalid_request`. Feature-detect the method on older hosts; no released minimum host version has been established.
+The query returns the current appearance's available clips, including locally registered custom keys. It takes no arguments, requires an active plugin with the `pet` permission, and is available in tool, panel and block contexts. It exposes first-variant metadata only, with no filesystem paths. Errors include `permission_denied`, `plugin_inactive`, `unsupported_context` and `invalid_request`. The extension is included in the main branch. Feature-detect the method on older hosts: validation of the target invitation-only host 0.23.0 package is pending, and no validated minimum host version or new npm release is being claimed.
 
 继续通过已有 `pet.pet.playAnim(state)` 播放，不为各动作新增方法。其布尔返回值仅确认已向宠物窗口分发，不能代表播放完成。单次素材自然结束回待机，循环素材持续到下一动作或真实交互。既有唤醒优先级保持：wake 不打断走路/送文件等行为。缺失标准动作默认回 idle；send 优先回 walk，edgehide 优先回 sleep；未注册的未知键不播放。动画调用只控制本机伙伴；不是远程操控访客的接口。
 
