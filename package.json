@@ -22,7 +22,7 @@
     "frozen": true,
     "frozenMethods": 30,
     "experimentalMethods": 30,
-    "note": "30 frozen / 30 experimental public capabilities; appearance and animation definitions are on main, host 0.23.0 invited-build validation pending, no npm release; account delegation remains unreleased."
+    "note": "30 frozen / 30 experimental public capabilities; appearance and animation definitions are on main, host 0.23.0 macOS arm64 local compatibility package validated (not a public host release), no npm release; account delegation remains unreleased."
   },
   "devDependencies": {
     "typescript": "5.9.3"

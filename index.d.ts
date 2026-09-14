@@ -110,7 +110,7 @@ export interface PetSurface {
    * （这是正确行为，不是错误）。
    */
   playAnim(state: string): Promise<boolean>;
-  /** @experimental Current appearance clips, no paths; requires pet permission. Main-branch source; host 0.23.0 invited-build validation pending, no npm release. */
+  /** @experimental Current appearance clips, no paths; requires pet permission. Main-branch source; host 0.23.0 macOS arm64 local compatibility package validated (not a public host release), no npm release. */
   getAnimations(): Promise<PetAnimation[]>;
   /** TTS 朗读一句话。 */
   speak(text: string): Promise<boolean>;
