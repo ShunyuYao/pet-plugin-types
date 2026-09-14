@@ -119,3 +119,12 @@ tool.appearance.apply('another-plugin');
 // @ts-expect-error reset has no arbitrary target.
 panel.appearance.reset({ key: 'another-plugin' });
 definePluginManifest({ id: 'appearance-test', name: 'Appearance', version: '0.2.0', kind: ['asset', 'panel'], permissions: ['ui', 'appearance'], entry: { character: 'character.json', panel: { src: 'panel.html' } } });
+
+// Current-appearance animation metadata is available in all three contexts.
+const animations: Promise<import('../index').PetAnimation[]> = tool.pet.getAnimations();
+panel.pet.getAnimations();
+block.pet.getAnimations();
+// @ts-expect-error Query is scoped to the current companion; no arguments.
+panel.pet.getAnimations('someone-else');
+// @ts-expect-error Private frame paths are not exposed.
+animations.then(items => items[0].dir);

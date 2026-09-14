@@ -87,8 +87,17 @@ export interface PetSecrets {
 // pet —— 权限：`pet`。三上下文一致。
 // ─────────────────────────────────────────────────────────────
 
+/** @experimental Metadata of one available clip (first variant). No filesystem paths. */
+export interface PetAnimation {
+  state: string;
+  frameCount: number;
+  fps: number;
+  loop: boolean;
+  standard: boolean;
+}
+
 /**
- * 宠物表现通道。返回 `false` 表示宠物窗当前不存在（不是错误）。
+ * 宠物表现通道。操作方法返回 `false` 表示宠物窗当前不存在（不是错误）。
  *
  * 权限：`pet`
  * 上下文：tool / panel / dashboard-card
@@ -101,6 +110,8 @@ export interface PetSurface {
    * （这是正确行为，不是错误）。
    */
   playAnim(state: string): Promise<boolean>;
+  /** @experimental Current appearance clips, no paths; requires pet permission. Unreleased. */
+  getAnimations(): Promise<PetAnimation[]>;
   /** TTS 朗读一句话。 */
   speak(text: string): Promise<boolean>;
 }
