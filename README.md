@@ -232,7 +232,7 @@ definePluginManifest({
 - **消费服务**写在 `services` 数组里，宿主自动展开成 `service:<name>` 参与授权。
 - **`settings.get` 无需权限**：读的是插件自己 manifest 声明的字段值，不涉及宿主配置。
   「读自己的东西不需要授权」是有意设计，不是疏漏。
-- C 档权限（`ui:theme`、`auth-window`）不在类型联合中——宿主运行时仍认，但不是对外契约。
+- `ui:theme` 在未发布的纯数据主题包中成为实验权限；`ui.injectStyle` 方法仍不开放。C 档 `auth-window` 不在类型联合中。
 
 ## 旁加载风险提示
 
@@ -350,3 +350,21 @@ The query returns the current appearance's available clips, including locally re
 Cross-machine appearance v2 permits the fourteen listed states with explicit loop flags; idle and walk are required. Legacy v1 two-state packages remain supported. Unsupported receivers fail preparation before departure. Only validated static PNG frames and animation metadata are transferred, never plugin code. Other visitor action slots can be decoded without a new automatic behavior: actual visitor triggers follow its existing arrival, speaking, dragging, delivery and edge lifecycle.
 
 查询沿用现有 SDK 桥参数归一化：JavaScript 多传的参数会被零参数方法忽略，TypeScript 签名在编译时拒绝它们；原始主进程协议载荷若带参数则拒绝 invalid_request。The existing JavaScript bridge normalizes this method to zero arguments (extra caller arguments are ignored); TypeScript rejects extra arguments at compile time. A malformed raw host protocol request with arguments is rejected with invalid_request.
+
+## 聊天主题包 v1 / Chat themes (experimental, unreleased)
+
+本节描述开发分支的格式，最低已发布宿主版本尚未确定，不能据类型或文档更新宣称既有宿主支持。主题包由用户在设置中选择，安装不会自动应用，不读取聊天内容，不运行主题脚本，不增加 tool/panel/block 方法。
+
+This data-only format is experimental and unreleased. No released host compatibility is claimed. Installing registers a choice; the user selects it in host settings. Themes cannot read chat content or execute code, and add no SDK methods. Raw ui.injectStyle remains closed.
+
+manifest 使用 kind: ['theme']、permissions: ['ui:theme']，entry 仅有 theme 字段，值为包内相对路径（推荐 theme.json）。不接受其他入口、services、provides 或 activation。
+
+Only the theme kind and ui:theme permission are accepted; entry contains only a relative theme path. Service, activation and executable entry declarations are rejected.
+
+主题 JSON 精确包含 schemaVersion: 1、target: 'chat'、colors、radius、bubbleRadius、texture 六个字段，最多 16 KiB。colors 必须提供 canvas、panel、ink、muted、surface、card、line、accent、accentInk、tint、success、error、errorSurface、file、fileInk，每值为 #RRGGBB。两个圆角为 0–28 整数，texture 为 plain / paper / grid。未知字段、脚本、任意 CSS、URL、越界路径均拒绝。
+
+JSON has exactly six fields and fifteen #RRGGBB color slots, integer radii 0–28, and a plain/paper/grid texture preset. The host enforces the 16 KiB limit, exact values and path containment. TypeScript checks do not replace runtime validation.
+
+切换保留草稿和会话，重启恢复有效选择；卸载、停用或失效恢复默认并解释原因，重新安装不自动选中。保存失败保留现有选择，包更新失败保留之前可用版本。
+
+Switching preserves drafts and conversation state. Valid choices survive restart. Removal, disabling or invalidation restores the default with a reason; reinstalling does not automatically select the package. Failed selection writes keep the current choice; failed updates retain the previous working version.

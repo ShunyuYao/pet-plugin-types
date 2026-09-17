@@ -1,5 +1,6 @@
 import type { Pet, PetTool, PetPanel, PetBlock, BadgeOptions, ComposeFileOptions } from '../index';
 import { definePluginManifest } from '../manifest';
+import type { ThemeDefinition, ThemeColors, ThemeRadius, ThemePluginManifest, PluginManifest } from '../index';
 
 declare const tool: PetTool;
 declare const panel: PetPanel;
@@ -128,3 +129,61 @@ block.pet.getAnimations();
 panel.pet.getAnimations('someone-else');
 // @ts-expect-error Private frame paths are not exposed.
 animations.then(items => items[0].dir);
+
+// Theme packages are data-only. Their permission never opens ui.injectStyle.
+const themeManifest: ThemePluginManifest = definePluginManifest({
+  id: 'warm-paper', name: 'Warm paper', version: '0.1.0', apiVersion: 1,
+  kind: ['theme'], permissions: ['ui:theme'], entry: { theme: 'theme.json' },
+});
+const explicitTheme: PluginManifest<'theme'> = themeManifest;
+const colors: ThemeColors = {
+  canvas: '#efece5', panel: '#fffaf0', ink: '#373c31', muted: '#7a806e',
+  surface: '#f0ecdf', card: '#fffdf6', line: '#e1dfd0', accent: '#456550',
+  accentInk: '#fffdf7', tint: '#e7edde', success: '#54795e', error: '#a8513f',
+  errorSurface: '#f9e7dd', file: '#e6ddca', fileInk: '#66583d',
+};
+const definition: ThemeDefinition = {
+  schemaVersion: 1, target: 'chat', colors, radius: 18, bubbleRadius: 15, texture: 'paper',
+};
+// @ts-expect-error Theme packages cannot mix executable kinds.
+definePluginManifest({ ...themeManifest, kind: ['theme', 'tool'], entry: { theme: 'theme.json', tool: 'index.js' } });
+// @ts-expect-error ui:theme is the one required permission.
+definePluginManifest({ ...themeManifest, permissions: [] });
+// @ts-expect-error No permissions can be added to a theme package.
+definePluginManifest({ ...themeManifest, permissions: ['ui:theme', 'storage'] });
+// @ts-expect-error Duplicate permissions are not a singleton tuple.
+definePluginManifest({ ...themeManifest, permissions: ['ui:theme', 'ui:theme'] });
+// @ts-expect-error A data-only theme cannot have a tool entry.
+definePluginManifest({ ...themeManifest, entry: { theme: 'theme.json', tool: 'index.js' } });
+// @ts-expect-error The package-local theme path must be a string (host validates traversal).
+definePluginManifest({ ...themeManifest, entry: { theme: ['theme.json'] } });
+// @ts-expect-error Theme packages do not consume services.
+definePluginManifest({ ...themeManifest, services: [] });
+// @ts-expect-error Theme packages cannot provide services.
+definePluginManifest({ ...themeManifest, provides: { service: 'theme' } });
+// @ts-expect-error Theme selection belongs to the user, not activation metadata.
+definePluginManifest({ ...themeManifest, activation: 'opt-in' });
+// @ts-expect-error Theme entry is required.
+definePluginManifest({ id: 'x', name: 'X', version: '0.1.0', kind: ['theme'], permissions: ['ui:theme'] });
+// @ts-expect-error Ordinary plugins cannot use the data-only theme permission.
+definePluginManifest({ id: 'x', name: 'X', version: '0.1.0', kind: ['tool'], entry: { tool: 'index.js' }, permissions: ['ui:theme'] });
+// @ts-expect-error No extra color keys.
+const extraColor: ThemeColors = { ...colors, custom: '#ffffff' };
+// @ts-expect-error Color strings cannot be arrays.
+const arrayColor: ThemeColors = { ...colors, ink: ['#000000'] };
+// @ts-expect-error All fifteen color fields are required.
+const incompleteColors: ThemeColors = { ink: '#000000' };
+// @ts-expect-error The theme only targets chat.
+const wrongTarget: ThemeDefinition = { ...definition, target: 'settings' };
+// @ts-expect-error No future schema versions are claimed.
+const wrongSchema: ThemeDefinition = { ...definition, schemaVersion: 2 };
+// @ts-expect-error Arbitrary CSS is not a theme field.
+const style: ThemeDefinition = { ...definition, css: 'body { display: none; }' };
+// @ts-expect-error Texture is a host-owned preset, never a URL.
+const texture: ThemeDefinition = { ...definition, texture: 'https://example.com/a.png' };
+// @ts-expect-error Radius must be an integer in the supported range.
+const radius: ThemeRadius = 29;
+// @ts-expect-error Fractional radii are not allowed.
+const fractional: ThemeRadius = 2.5;
+// @ts-expect-error Negative radii are not allowed.
+const negative: ThemeRadius = -1;

@@ -13,7 +13,8 @@ export type PluginKind =
   | 'skill'
   | 'settings'
   | 'service'
-  | 'dashboard-card';
+  | 'dashboard-card'
+  | 'theme';
 
 /**
  * 已冻结（A 档）的权限名。同一 `apiVersion` 内只加不改不删。
@@ -45,6 +46,7 @@ export type FrozenPermission =
  */
 export type ExperimentalPermission =
   | `account:authorize:${string}`
+  | 'ui:theme'
   | 'appearance'
   | 'ai'
   | 'files'
@@ -56,8 +58,8 @@ export type ExperimentalPermission =
 /**
  * 权限名的字面量联合（A 档 + B 档）。
  *
- * 判定为 C 档「本轮不开放」的权限（`ui:theme`、`auth-window`）**不在此列**：
- * 宿主运行时仍认它们（内置插件在用），但它们不是对外契约，第三方插件不应声明。
+ * `ui:theme` 仅用于未发布的纯数据主题包，不开放 `ui.injectStyle`。
+ * C 档 `auth-window` 不在此列，不是第三方公开契约。
  */
 export type PluginPermission = FrozenPermission | ExperimentalPermission;
 
@@ -157,7 +159,7 @@ export interface PluginManifestBase {
   activation?: 'opt-in';
   /** @experimental 参与宿主登录后的新版提醒。缺省 false；true 仍须用户逐次确认才下载安装。 */
   updateReminders?: boolean;
-  permissions?: PluginPermission[];
+  permissions?: Exclude<PluginPermission, 'ui:theme'>[];
   /**
    * 要消费的服务名。宿主授权时展开为 `service:<name>`。
    *
@@ -188,11 +190,31 @@ export interface PluginManifestBase {
  * });
  * ```
  */
-export type PluginManifest<K extends PluginKind = PluginKind> =
+type ExecutablePluginManifest<K extends PluginKind> =
   PluginManifestBase & {
     /** 非空子集 */
     kind: K[];
   } & RequiredProvides<K> & EntryField<K>;
+
+/**
+ * @experimental Unreleased data-only chat theme package; no host support version is claimed.
+ * Only a package-local JSON entry is allowed. The host validates its path, 16 KiB size limit
+ * and ThemeDefinition content; no tool, panel, services or activation code is executed.
+ */
+export type ThemePluginManifest = Omit<PluginManifestBase, 'permissions' | 'services' | 'activation'> & {
+  kind: ['theme'];
+  permissions: ['ui:theme'];
+  entry: { theme: string } & { [Key in keyof PluginEntry]?: never };
+  services?: never;
+  provides?: never;
+  activation?: never;
+};
+
+/** Theme packages are a separate branch and cannot mix with executable kinds. */
+export type PluginManifest<K extends PluginKind = PluginKind> =
+  [K] extends ['theme'] ? ThemePluginManifest
+  : 'theme' extends K ? ThemePluginManifest | ExecutablePluginManifest<Exclude<K, 'theme'>>
+  : ExecutablePluginManifest<Exclude<K, 'theme'>>;
 
 /**
  * 恒等函数，唯一作用是让 TS 从 `kind` 字面量推断 `K`，从而把宿主的
@@ -201,6 +223,7 @@ export type PluginManifest<K extends PluginKind = PluginKind> =
  * 写 `manifest.json` 时用不上（JSON 没有函数），但用 TS/JS 生成 manifest、
  * 或在测试里构造 manifest 时，这是拿到静态校验的方式。
  */
-export declare function definePluginManifest<K extends PluginKind>(
-  manifest: PluginManifest<K>
-): PluginManifest<K>;
+export declare function definePluginManifest(manifest: ThemePluginManifest): ThemePluginManifest;
+export declare function definePluginManifest<K extends Exclude<PluginKind, 'theme'>>(
+  manifest: ExecutablePluginManifest<K>
+): ExecutablePluginManifest<K>;

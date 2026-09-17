@@ -12,6 +12,7 @@ assert(hostDir, 'Required: PET_PLUGIN_HOST_DIR or --host <host demo directory>. 
 const runtimeDir = path.resolve(hostDir, 'core/plugin-runtime');
 const { SURFACE } = require(path.join(runtimeDir, 'sdk-surface.js'));
 const manifest = require(path.join(runtimeDir, 'manifest.js'));
+const themeContract = require(path.resolve(hostDir, 'core/ui-theme-contract.js'));
 const root = path.resolve(__dirname, '..');
 const program = ts.createProgram([path.join(root, 'index.d.ts')], { strict: true, noEmit: true, target: ts.ScriptTarget.ES2022 });
 const diagnostics = ts.getPreEmitDiagnostics(program);
@@ -83,4 +84,40 @@ try {
   assert.throws(() => check({ ...base, activation: true }), /activation/);
   assert.throws(() => check({ ...base, entry: { ...base.entry, panel: { src: 'panel.html', transparent: 'yes' } } }), /transparent/);
   console.log('PASS real host manifest: valid declarations accepted, invalid declarations rejected');
+
+  const themeManifest = { id: 'sample-theme', name: 'Sample theme', version: '0.1.0', apiVersion: 1,
+    kind: ['theme'], permissions: ['ui:theme'], entry: { theme: 'theme.json' } };
+  const colors = Object.fromEntries(themeContract.COLOR_KEYS.map(key => [key, '#123456']));
+  const definition = { schemaVersion: 1, target: 'chat', colors, radius: 18, bubbleRadius: 15, texture: 'paper' };
+  const writeTheme = value => fs.writeFileSync(path.join(dir, 'theme.json'), JSON.stringify(value));
+  writeTheme(definition);
+  const acceptedTheme = check(themeManifest);
+  assert.deepEqual(acceptedTheme.kind, ['theme']);
+  assert.deepEqual(manifest.requestedGrants(acceptedTheme), ['ui:theme']);
+  assert.deepEqual(themeContract.readTheme(dir, acceptedTheme.entry.theme), definition);
+  for (const change of [
+    { kind: ['theme', 'tool'], entry: { theme: 'theme.json', tool: 'index.js' } },
+    { permissions: [] }, { permissions: ['ui:theme', 'storage'] }, { permissions: ['ui:theme', 'ui:theme'] },
+    { entry: { theme: 'theme.json', panel: { src: 'panel.html' } } },
+    { entry: { theme: '../theme.json' } }, { services: [] },
+    { provides: { service: 'sample' } }, { activation: 'opt-in' },
+  ]) assert.throws(() => check({ ...themeManifest, ...change }), undefined, `Theme declaration rejected: ${JSON.stringify(change)}`);
+
+  // Compare exported type fields with the actual validator, not only our own fixture.
+  const themeType = checker.getDeclaredTypeOfSymbol(exportsByName.get('ThemeDefinition'));
+  assert.deepEqual(checker.getPropertiesOfType(themeType).map(p => p.name).sort(), Object.keys(definition).sort());
+  const colorsType = checker.getDeclaredTypeOfSymbol(exportsByName.get('ThemeColors'));
+  assert.deepEqual(checker.getPropertiesOfType(colorsType).map(p => p.name).sort(), [...themeContract.COLOR_KEYS].sort());
+  assert.equal(themeContract.MAX_BYTES, 16 * 1024);
+  for (const change of [
+    { schemaVersion: 2 }, { target: 'settings' }, { css: 'body{}' },
+    { colors: { ...colors, panel: ['#123456'] } }, { colors: { ...colors, panel: '#fff' } },
+    { radius: 29 }, { bubbleRadius: 0.5 }, { texture: 'https://example.com/theme.png' },
+  ]) {
+    writeTheme({ ...definition, ...change });
+    assert.throws(() => themeContract.readTheme(dir, 'theme.json'));
+  }
+  fs.writeFileSync(path.join(dir, 'theme.json'), JSON.stringify(definition) + ' '.repeat(themeContract.MAX_BYTES));
+  assert.throws(() => themeContract.readTheme(dir, 'theme.json'));
+  console.log('PASS real host theme: exported fields, strict manifest, JSON content and 16 KiB bound');
 } finally { fs.rmSync(dir, { recursive: true, force: true }); }

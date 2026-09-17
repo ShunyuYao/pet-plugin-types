@@ -6,6 +6,7 @@
   "files": [
     "index.d.ts",
     "manifest.d.ts",
+    "theme.d.ts",
     "README.md"
   ],
   "license": "MIT",
