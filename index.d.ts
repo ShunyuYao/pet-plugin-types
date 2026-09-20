@@ -407,6 +407,103 @@ export interface PetServices {
    * 注：宿主内部分两步（先取方法列表再造代理），对外契约面只有 `get`。
    */
   get(name: string): Promise<ServiceProxy>;
+
+  /**
+   * @experimental 直接调用某个服务的一个方法，不经过 `get` 造代理。
+   *
+   * `get()` 返回的代理最终也走这条通道；当调用方只需要打一次、或需要自己
+   * 持有参数序列化时机时，直接用 `invoke` 更省一次往返。
+   *
+   * 服务未提供、未授权、方法未在服务的方法表里声明时 reject。
+   * `args` 必须可 JSON 序列化（宿主上限 64KB）。
+   */
+  invoke(name: string, method: string, args: unknown[]): Promise<unknown>;
+}
+
+// ─────────────────────────────────────────────────────────────
+// character —— 权限：`character:read`（读）/ `character:watch`（订阅）。
+// 读的是**宿主当前生效的角色形象**（含自定义形象换装后的结果），不是插件自带素材。
+// 四上下文（tool / panel / block / work）一致。
+// ─────────────────────────────────────────────────────────────
+
+/** @experimental 当前形象的一个姿势帧。`dataUrl` 是内联 base64，不暴露文件系统路径。 */
+export interface CharacterPose {
+  id: string;
+  label: string;
+  /** `data:image/png;base64,…` 或 `data:image/webp;base64,…` */
+  dataUrl: string;
+}
+
+/** @experimental 当前形象的一次快照。`signature` 变化即代表形象已改变。 */
+export interface CharacterRevision {
+  key: string;
+  name: string;
+  /** 形象指纹：用于判断两次读取是否同一形象，不要解析其内部结构。 */
+  signature: string;
+}
+
+/** @experimental 形象快照 + 请求到的姿势帧（最多 8 张）。 */
+export interface CharacterSnapshot extends CharacterRevision {
+  poses: CharacterPose[];
+}
+
+/**
+ * @experimental 读取并订阅宿主当前角色形象。
+ *
+ * 订阅是**长轮询**形态而非回调：`watch()` 拿一个订阅 id，反复 `next(id)` 取下一次
+ * 变化，不再需要时 `unwatch(id)`。这样跨进程（tool 跑在 utilityProcess）不必维持
+ * 回调引用，插件失活时宿主也能自行回收。单个插件最多 8 个订阅。
+ *
+ * 上下文：tool / panel / block / work
+ */
+export interface PetCharacter {
+  /**
+   * @experimental 取当前形象。`states` 指定要哪些姿势（1–8 个，不重复）；
+   * 省略则只返回形象标识、不带姿势帧。权限：`character:read`。
+   */
+  getCurrent(options?: { states?: string[] }): Promise<CharacterSnapshot>;
+  /** @experimental 开始订阅，返回订阅 id。权限：`character:watch`。 */
+  watch(): Promise<string>;
+  /**
+   * @experimental 等待该订阅的下一次形象变化；订阅被回收时 resolve 成 `null`。
+   * 权限：`character:watch`。
+   */
+  next(subscriptionId: string): Promise<CharacterRevision | null>;
+  /** @experimental 结束订阅。返回是否确实撤销了一个存在的订阅。权限：`character:watch`。 */
+  unwatch(subscriptionId: string): Promise<boolean>;
+}
+
+// ─────────────────────────────────────────────────────────────
+// capabilities —— **无权限门**：查询「某个能力在当前上下文对我是否可用」，
+// 本身不授予任何能力。用于插件在调用前自检，而不是靠 try/catch 试错。
+// 四上下文（tool / panel / block / work）一致。
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * @experimental 某个能力对当前调用方的可用状态。
+ *
+ * - `unsupported` 宿主根本没有这个能力（版本太旧）
+ * - `unsupported_context` 宿主有，但当前上下文不开放
+ * - `available` 可用
+ * - `revoked` 曾授权、已被撤销
+ * - `not_authorized` 未授权（manifest 里没声明或用户没同意）
+ * - `service_unavailable` 依赖的服务当前不在线
+ */
+export interface CapabilityStatus {
+  status: 'unsupported' | 'unsupported_context' | 'available' | 'revoked' | 'not_authorized' | 'service_unavailable';
+  /** 该能力需要的权限名；无权限门的能力不返回此字段。 */
+  permission?: string;
+  /** 为 true 时还需额外的服务授权（`service:<name>`），仅声明权限不够。 */
+  requiresServiceGrant?: boolean;
+}
+
+/** @experimental 能力自检。 */
+export interface PetCapabilities {
+  /**
+   * @experimental 查询某个 SDK 方法当前是否可用，如 `'character.getCurrent'`。
+   * 只读，不触发授权弹窗，也不改变任何授权状态。
+   */
+  query(capability: string): Promise<CapabilityStatus>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -703,6 +800,10 @@ export interface PetCommon {
   activity: PetActivity;
   /** @experimental options 不承诺 */
   ai: PetAi;
+  /** @experimental 读取/订阅宿主当前角色形象；签名与语义可能在任一 apiVersion 变更 */
+  character: PetCharacter;
+  /** @experimental 能力自检，本身不授予能力 */
+  capabilities: PetCapabilities;
 }
 
 /**
