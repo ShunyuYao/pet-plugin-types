@@ -844,8 +844,12 @@ export interface PetTool extends PetCommon {
  * `ui.openPanel` 在此不可用。
  */
 export interface PetPanel extends PetCommon {
-  /** @experimental Only this asset plugin's appearance; requires appearance permission. */
-  appearance: PetAppearance;
+  /**
+   * @experimental Only this asset plugin's appearance; requires appearance permission.
+   * 不含 `refresh`：重读素材要改宿主进程内的角色注册表，属常驻 tool 的职责，
+   * 渲染层窗口关闭即失活不应持有（宿主对 panel 调用直接拒 `unsupported_context`）。
+   */
+  appearance: Omit<PetAppearance, 'refresh'>;
   ui: Omit<PetUi, 'openPanel' | 'injectStyle'>;
   clipboard: Omit<PetClipboard, 'startHistory' | 'stopHistory'>;
   errands: PetErrands;
@@ -952,4 +956,12 @@ export interface PetAppearance {
   apply(): Promise<AppearanceState>;
   /** @experimental Restore the companion's original appearance only while this plugin owns it. Otherwise no-op. */
   reset(): Promise<AppearanceState>;
+  /**
+   * @experimental Re-read this plugin's own appearance assets from disk and return the refreshed state.
+   *
+   * 只对 `kind` 含 `asset` 且持有自身形象的插件有效，否则 reject `appearance_unavailable`。
+   * 仅 `tool` 上下文可用（panel 调用 reject `unsupported_context`）：重读素材要改宿主
+   * 进程内的角色注册表，属常驻进程职责，渲染层窗口关闭即失活不应持有。
+   */
+  refresh(): Promise<AppearanceState>;
 }

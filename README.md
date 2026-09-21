@@ -152,6 +152,7 @@ definePluginManifest({
 | `appearance` | `getState` | B | B | — |
 | `appearance` | `apply` | B | B | — |
 | `appearance` | `reset` | B | B | — |
+| `appearance` | `refresh` | B | — | — |
 | `account` | `getState` | B | — | — |
 | `account` | `authorize` | B | — | — |
 | `storage` | `get` | A | A | A |
