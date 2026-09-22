@@ -23,7 +23,16 @@ const checker = program.getTypeChecker();
 const source = program.getSourceFile(path.join(root, 'index.d.ts'));
 const exportsByName = new Map(checker.getExportsOfModule(checker.getSymbolAtLocation(source)).map(s => [s.name, s]));
 const publicEntries = SURFACE.filter(e => e.tier !== 'closed');
-for (const [context, name] of [['tool', 'PetTool'], ['panel', 'PetPanel'], ['block', 'PetBlock']]) {
+const contexts = [['tool', 'PetTool'], ['panel', 'PetPanel'], ['block', 'PetBlock'], ['render', 'PetRender']];
+for (const method of ['onControl', 'submitFrame', 'fail']) {
+  const entry = publicEntries.find(e => e.ns === 'render' && e.method === method);
+  assert(entry, `render.${method}: missing public contract`);
+  assert.deepEqual(entry.contexts, ['render'], `render.${method}: must remain render-only`);
+  assert.equal(entry.kind, 'custom', `render.${method}: must use the dedicated bridge`);
+  assert.equal(entry.tier, 'experimental');
+  assert.equal(entry.permission, 'appearance:render');
+}
+for (const [context, name] of contexts) {
   const type = checker.getDeclaredTypeOfSymbol(exportsByName.get(name));
   const actual = [];
   for (const ns of checker.getPropertiesOfType(type)) {
@@ -57,10 +66,10 @@ for (const readme of readmes) {
   assert(region, `${readme}: missing SDK matrix markers`);
   const rows = [];
   for (const line of region[1].split('\n')) {
-    const m = /^\| `([^`]+)` \| `([^`]+)` \| ([AB—]) \| ([AB—]) \| ([AB—]) \|$/.exec(line);
+    const m = /^\| `([^`]+)` \| `([^`]+)` \| ([AB—]) \| ([AB—]) \| ([AB—]) \| ([AB—]) \|$/.exec(line);
     if (m) rows.push(`${m[1] === '(root)' ? '' : m[1] + '.'}${m[2]}:${m.slice(3).join(',')}`);
   }
-  const expected = publicEntries.map(e => `${e.ns ? e.ns + '.' : ''}${e.method}:${['tool', 'panel', 'block'].map(c => e.contexts.includes(c) ? (e.tier === 'frozen' ? 'A' : 'B') : '—').join(',')}`);
+  const expected = publicEntries.map(e => `${e.ns ? e.ns + '.' : ''}${e.method}:${contexts.map(([c]) => e.contexts.includes(c) ? (e.tier === 'frozen' ? 'A' : 'B') : '—').join(',')}`);
   assert.deepEqual(rows.sort(), expected.sort(), `${readme}: public documentation matrix differs`);
   console.log(`PASS ${path.basename(path.dirname(readme))} documentation: ${rows.length} public entries`);
 }
@@ -84,6 +93,41 @@ try {
   assert.throws(() => check({ ...base, activation: true }), /activation/);
   assert.throws(() => check({ ...base, entry: { ...base.entry, panel: { src: 'panel.html', transparent: 'yes' } } }), /transparent/);
   console.log('PASS real host manifest: valid declarations accepted, invalid declarations rejected');
+
+  const rendererManifest = { id: 'sample-renderer', name: 'Renderer', version: '0.1.0', apiVersion: 1,
+    kind: ['appearance-renderer'], permissions: ['appearance:render'],
+    entry: { renderer: { src: 'renderer.html', apiVersion: 1, dataVersions: [1] } } };
+  fs.writeFileSync(path.join(dir, 'renderer.html'), '<!doctype html><html><body></body></html>');
+  fs.writeFileSync(path.join(dir, 'renderer.js'), '<!doctype html><html><body></body></html>');
+  fs.mkdirSync(path.join(dir, 'nested'));
+  const acceptedRenderer = check(rendererManifest);
+  assert.deepEqual(acceptedRenderer.kind, ['appearance-renderer']);
+  assert.deepEqual(manifest.requestedGrants(acceptedRenderer), ['appearance:render']);
+  assert.deepEqual(acceptedRenderer.entry.renderer, rendererManifest.entry.renderer);
+  assert.deepEqual(check({ ...rendererManifest, entry: { renderer: { ...rendererManifest.entry.renderer, dataVersions: [1, 2] } } }).entry.renderer.dataVersions, [1, 2]);
+  assert(manifest.EXPERIMENTAL_PERMISSIONS.includes('appearance:render'));
+  for (const change of [
+    { kind: ['appearance-renderer', 'tool'], entry: { ...rendererManifest.entry, tool: 'index.js' } },
+    { permissions: [] }, { permissions: ['appearance:render', 'storage'] },
+    { permissions: ['appearance:render', 'appearance:render'] },
+    { entry: {} }, { entry: { ...rendererManifest.entry, panel: { src: 'panel.html' } } },
+    { services: [] }, { provides: { service: 'render' } },
+  ]) assert.throws(() => check({ ...rendererManifest, ...change }), undefined, `Renderer declaration rejected: ${JSON.stringify(change)}`);
+  for (const change of [
+    // Existing files ensure failure is due to the entry contract, not ENOENT.
+    { src: 'nested/../renderer.html' }, { src: path.join(dir, 'renderer.html') },
+    { src: '../renderer.html' }, { src: 'https://example.com/renderer.html' },
+    { src: 'renderer.js' }, { apiVersion: 2 }, { apiVersion: '1' },
+    { dataVersions: [] }, { dataVersions: [0] }, { dataVersions: [-1] },
+    { dataVersions: [1.5] }, { dataVersions: [Number.MAX_SAFE_INTEGER + 1] }, { dataVersions: [1, 1] },
+    { dataVersions: Array.from({ length: 65 }, (_, i) => i + 1) },
+  ]) assert.throws(() => check({ ...rendererManifest, entry: { renderer: { ...rendererManifest.entry.renderer, ...change } } }), undefined, `Renderer entry rejected: ${JSON.stringify(change)}`);
+  assert.throws(() => check({ ...base, permissions: ['appearance:render'] }));
+  const renderType = checker.getDeclaredTypeOfSymbol(exportsByName.get('PetRender'));
+  assert.deepEqual(checker.getPropertiesOfType(renderType).map(p => p.name), ['render']);
+  const frameType = checker.getDeclaredTypeOfSymbol(exportsByName.get('RenderFrame'));
+  assert.deepEqual(checker.getPropertiesOfType(frameType).map(p => p.name).sort(), ['height', 'phase', 'pixels', 'seq', 'width', 'x', 'y']);
+  console.log('PASS real host renderer: isolated context, strict declaration, bridge/data versions and frame fields');
 
   const themeManifest = { id: 'sample-theme', name: 'Sample theme', version: '0.1.0', apiVersion: 1,
     kind: ['theme'], permissions: ['ui:theme'], entry: { theme: 'theme.json' } };

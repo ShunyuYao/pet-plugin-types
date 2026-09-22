@@ -14,6 +14,7 @@ export type PluginKind =
   | 'settings'
   | 'service'
   | 'dashboard-card'
+  | 'appearance-renderer'
   | 'theme';
 
 /**
@@ -48,6 +49,7 @@ export type ExperimentalPermission =
   | `account:authorize:${string}`
   | 'ui:theme'
   | 'appearance'
+  | 'appearance:render'
   | 'ai'
   | 'files'
   | 'activity'
@@ -159,7 +161,7 @@ export interface PluginManifestBase {
   activation?: 'opt-in';
   /** @experimental 参与宿主登录后的新版提醒。缺省 false；true 仍须用户逐次确认才下载安装。 */
   updateReminders?: boolean;
-  permissions?: Exclude<PluginPermission, 'ui:theme'>[];
+  permissions?: Exclude<PluginPermission, 'ui:theme' | 'appearance:render'>[];
   /**
    * 要消费的服务名。宿主授权时展开为 `service:<name>`。
    *
@@ -210,11 +212,30 @@ export type ThemePluginManifest = Omit<PluginManifestBase, 'permissions' | 'serv
   activation?: never;
 };
 
-/** Theme packages are a separate branch and cannot mix with executable kinds. */
+/** @experimental Package-local HTML and the separate render-bridge/data-format versions. Unreleased. */
+export interface AppearanceRendererEntry {
+  src: string;
+  apiVersion: 1;
+  /** One to 64 unique positive safe integers, validated by the host. */
+  dataVersions: [number, ...number[]];
+}
+
+/** @experimental A dedicated sandbox renderer, with no tool/panel/service entry or general SDK. */
+export type AppearanceRendererManifest = Omit<PluginManifestBase, 'permissions' | 'services'> & {
+  kind: ['appearance-renderer'];
+  permissions: ['appearance:render'];
+  entry: { renderer: AppearanceRendererEntry } & { [Key in keyof PluginEntry]?: never };
+  services?: never;
+  provides?: never;
+};
+
+type OrdinaryPluginKind = Exclude<PluginKind, 'theme' | 'appearance-renderer'>;
+
+/** Theme and renderer packages are separate branches and cannot mix with ordinary kinds. */
 export type PluginManifest<K extends PluginKind = PluginKind> =
-  [K] extends ['theme'] ? ThemePluginManifest
-  : 'theme' extends K ? ThemePluginManifest | ExecutablePluginManifest<Exclude<K, 'theme'>>
-  : ExecutablePluginManifest<Exclude<K, 'theme'>>;
+  ('theme' extends K ? ThemePluginManifest : never)
+  | ('appearance-renderer' extends K ? AppearanceRendererManifest : never)
+  | (Extract<K, OrdinaryPluginKind> extends never ? never : ExecutablePluginManifest<Extract<K, OrdinaryPluginKind>>);
 
 /**
  * 恒等函数，唯一作用是让 TS 从 `kind` 字面量推断 `K`，从而把宿主的
@@ -224,6 +245,7 @@ export type PluginManifest<K extends PluginKind = PluginKind> =
  * 或在测试里构造 manifest 时，这是拿到静态校验的方式。
  */
 export declare function definePluginManifest(manifest: ThemePluginManifest): ThemePluginManifest;
-export declare function definePluginManifest<K extends Exclude<PluginKind, 'theme'>>(
+export declare function definePluginManifest(manifest: AppearanceRendererManifest): AppearanceRendererManifest;
+export declare function definePluginManifest<K extends OrdinaryPluginKind>(
   manifest: ExecutablePluginManifest<K>
 ): ExecutablePluginManifest<K>;
