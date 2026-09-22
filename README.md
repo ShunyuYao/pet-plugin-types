@@ -452,8 +452,14 @@ Frame transport is a dedicated bounded local channel, not per-frame tool JSON RP
 
 M2 候选的访客契约复用以上三个方法和 `init.instance.kind:'visitor'`，没有新增公开方法或权限。宿主通过现有认证来访通道协商实时数据能力，传送出发时的不可变数据和资源；普通动作 v1–v3 描述不增加 realtime 字段。接收端仅运行本地已安装、已授权且兼容数据版本的 renderer，独立绑定每位访客；不传送、安装或执行对端插件代码，也不跨机传送连续 RGBA 帧。抓取、轻放、抛出由接收端本地渲染，召回或离开会抢占抓取与自由落体并清理会话。
 
-缺少、未授权或不兼容 renderer 时，串门继续使用普通动作并提示暂不支持布偶拖拽；资源损坏或准备失败须明确失败，不能伪装成缺能力降级。可用实时访客须在普通帧解码与首个有效 idle 帧在宿主离屏准备画布绘制后 ACK 后才放行出发。本节描述未发布 M2 的预期兼容契约，不代表已完成跨机或 E2E 验收。本分支没有 npm 发布、市场登记或可承诺的最低已发布宿主版本；测试宿主分发边界不变。
+缺少、未授权或不兼容 renderer 时，串门继续使用普通动作并提示暂不支持布偶拖拽；资源损坏或准备失败须明确失败，不能伪装成缺能力降级。可用实时访客须在普通帧解码与首个有效 idle 帧在宿主离屏准备画布绘制后 ACK 后才放行出发。本节描述未发布 M2 的预期兼容契约，具体平台的验证状态见本文件末尾；兼容契约不等同公开发版。本分支没有 npm 发布、市场登记或可承诺的最低已发布宿主版本；测试宿主分发边界不变。
 
 The unreleased M2 candidate binds a separate visitor session through the existing three render methods. The authenticated visit channel carries an immutable departure snapshot and data resources, while ordinary v1–v3 appearance descriptors remain unchanged. The receiver runs only a locally installed, authorized renderer compatible with that data version. Peer plugin code is never transferred, installed or executed; continuous RGBA frames stay local. Recall and departure cancel grabbing or falling and release the session.
 
-A missing, unauthorized or incompatible provider falls back to ordinary actions with a notice. Corrupt resources or failed preparation must fail explicitly. A supported realtime visitor requires ordinary-frame decoding and acknowledgement after drawing the first valid idle frame to the host preparation canvas before departure. These are candidate compatibility requirements, not completed cross-machine or E2E validation. No npm release, marketplace entry, minimum released host version or public host download is established here.
+A missing, unauthorized or incompatible provider falls back to ordinary actions with a notice. Corrupt resources or failed preparation must fail explicitly. A supported realtime visitor requires ordinary-frame decoding and acknowledgement after drawing the first valid idle frame to the host preparation canvas before departure. These are candidate compatibility requirements, not a public release declaration; see the dated validation status below. No npm release, marketplace entry, minimum released host version or public host download is established here.
+
+### 私有候选验证 / Private candidate validation
+
+2026-09-22 验证状态：私有 macOS arm64 候选的真实签名 ASAR 完成 168 项隐藏端到端检查；两个独立 Mac 经虚拟局域网完成 153 项检查，覆盖双向来访、轻放/抛出、召回、重启和缺 provider 回退。不是物理 Wi-Fi 广播、Windows、原生焦点/穿透或公开发布的证明。未新增能力或最低已发布宿主版本；个人素材不随这些公开仓库分发。
+
+Validation status (2026-09-22): a private macOS arm64 signed-ASAR candidate passed 168 hidden E2E checks; two separate Macs passed 153 checks over a virtual LAN, including both visit directions, placement/throwing, recall, restart and missing-provider fallback. This does not establish physical Wi-Fi broadcast, Windows, native focus/passthrough or a public release. No API or minimum released host version is added, and personal assets are not distributed by these public repositories.
