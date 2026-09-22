@@ -10,7 +10,7 @@
 
 **当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 48 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
 
-实时形象 M1b 的类型和文档属于候选开发分支，尚未发布 npm 包或宿主构建，不声明最低支持版本。The realtime M1b definitions are an unreleased development candidate; neither the package version nor apiVersion 1 proves host support.
+实时形象 M1b 与访客 M2 的类型和文档属于候选开发分支，尚未发布 npm 包或宿主构建，不声明最低支持版本。The realtime M1b and visitor M2 definitions are unreleased development candidates; neither the package version nor apiVersion 1 proves host support.
 
 
 ## ⚠️ v4 破坏性变更：好友主键从 petId 改为账号 UID
@@ -389,7 +389,7 @@ JSON has exactly six fields and fifteen #RRGGBB color slots, integer radii 0–2
 Switching preserves drafts and conversation state. Valid choices survive restart. Removal, disabling or invalidation restores the default with a reason; reinstalling does not automatically select the package. Failed selection writes keep the current choice; failed updates retain the previous working version.
 
 
-## 实时形象 / Realtime appearance（experimental，M1b 候选，未发布）
+## 实时形象 / Realtime appearance（experimental，M1b / M2 候选，未发布）
 
 公共渲染插件与个人形象包分开。渲染插件只带代码和公共模型；照片、个人参数及资源留在 asset 插件中。声明如下，不能把 `entry.renderer.apiVersion`（渲染桥版本）与 `realtime.dataVersion`（该 renderer 的数据格式）混用。dataVersions 接受 1–64 项不重复的正安全整数，dataVersion 是正安全整数；示例 [1] 是该 renderer 的选择，不是宿主限定：
 
@@ -418,7 +418,7 @@ Switching preserves drafts and conversation state. Valid choices survive restart
 }
 ```
 
-`RealtimeAppearanceDescriptor` 描述该字段。data/assets 路径相对于 character.json，不是 URL 或宿主路径。宿主验证真实路径包含关系；data 为最多 64 KiB 的 JSON，assets 最多 32 项，单项最多 16 MiB、总计最多 64 MiB，格式限 png/jpg/jpeg/webp/json/glb/bin。单张图片每边最多 8192 像素、总像素最多 16 × 1024²；文件字节限制不能替代解码尺寸限制。这些资源作为数据解码，不能执行。每个会话取得不可变快照；刷新同一形象也使旧会话失效。参数由 renderer 解释，宿主不认识具体身体、照片或物理模型字段。
+`RealtimeAppearanceDescriptor` 描述该字段。data/assets 路径相对于 character.json，不是 URL 或宿主路径。宿主验证真实路径包含关系；data 为最多 64 KiB 的 JSON，assets 最多 32 项，单项最多 16 MiB、总计最多 64 MiB，格式限 png/jpg/jpeg/webp/json/glb/bin。单张图片每边最多 8192 像素、总像素最多 16 × 1024²；文件字节限制不能替代解码尺寸限制。这些资源作为数据解码，不能执行。每个会话取得不可变快照；刷新本机主宠形象使该主宠旧会话失效。访客使用出发时固定的快照，不跟随发送端之后的换装。参数由 renderer 解释，宿主不认识具体身体、照片或物理模型字段。
 
 The code provider and the personal asset owner are separate packages. The renderer receives only the selected appearance's immutable data and session-scoped resource URLs. It receives no asset directory, host configuration, credentials, general SDK, or authority to choose another pet. Packages must declare and obtain `appearance:render`; ordinary appearance selection still uses the asset owner's `appearance` permission. `character:read` does not authorize rendering.
 
@@ -438,14 +438,22 @@ The code provider and the personal asset owner are separate packages. The render
 | `begin` | `x,y,t`、`view:{x,y,clip:'idle'|'walk',frame,flip:1|-1,presentedSeq?,localX,localY}` |
 | `move` / `end` | `x,y,t`；end 解除抓取，渲染可继续直至 idle |
 | `cancel` | `reason`；停止当前输入与计算 |
-| `ack` | `seq`；对应宿主实际绘制完成的帧 |
+| `ack` | `seq`；准备阶段在宿主离屏准备画布绘制后确认；活动阶段在可见画布提交后确认 |
 
-位置和局部坐标用屏幕 DIP，像素尺寸单独提供。M1b 实际只创建 host；visitor 类型留作 M2，不能据此声称访客已支持。帧 seq 必须单调增加，width/height 为 1–1024 的整数，pixels 为 Uint8Array 或 Uint8ClampedArray，字节数恰为 width × height × 4；phase 仅 active/idle。首个合法 idle 帧表示准备完成。始终最多一帧在途，等待相同 seq 的 ack 后再出帧；submitFrame 返回不是显示成功确认。无效帧不能续期，超时、错误及失活回收会话。
+位置和局部坐标用屏幕 DIP，像素尺寸单独提供。init.x/y、begin.view.x/y 和帧 x/y 都是绑定角色的屏幕原点，不是访客承载窗口原点。M1b 只创建 host；尚未发布的 M2 候选支持 visitor，旧类型中出现该联合值不代表旧宿主已实现。帧 seq 必须单调增加，width/height 为 1–1024 的整数，pixels 为 Uint8Array 或 Uint8ClampedArray，字节数恰为 width × height × 4；phase 仅 active/idle。首个合法 idle 帧在宿主离屏准备画布绘制后 ACK，表示准备完成，不覆盖当前普通姿态；活动阶段 ACK 在可见画布提交后发出。始终最多一帧在途，等待相同 seq 的 ack 后再出帧；submitFrame 返回不是显示成功确认。无效帧不能续期，超时、错误及失活回收会话。
+
+Preparation acknowledges the first valid idle frame after drawing it to the host preparation canvas, without replacing the current ordinary pose. During active rendering, acknowledgement follows submission to the visible canvas.
 
 `submitFrame` 的同步异常码为 `render_not_initialized`（init 前或 cancel 后）、`invalid_frame`（非法帧）、`stale_frame`（序号不大于上次已接受序号）和 `frame_in_flight`（前帧尚未确认）。拒绝不消耗序号；init 重置计数，匹配 ack 先释放帧位再通知 onControl，因此监听器可立即提交下一帧。像素视图紧密拷贝，不复制其无关的较大底层缓冲区。These are synchronous errors; rejection does not consume the sequence number, and an ack listener may safely submit the next frame.
 
-Frame transport is a dedicated bounded channel, not per-frame tool JSON RPC. A grab end and a render end are different events. Session/frame identity prevents delayed work from reviving an old interaction. Closing an asset panel preserves rendering; switching or refreshing the appearance, disabling/removing either package, owner-window closure, business departure, or display changes ends the session. Idle renderers stop physics work and may be reclaimed.
+Frame transport is a dedicated bounded local channel, not per-frame tool JSON RPC. A grab end and a render end are different events. Session/frame identity prevents delayed work from reviving an old interaction. Closing an asset panel preserves rendering. For the local companion, switching or refreshing the appearance or disabling/removing either package ends its session. For any instance, provider disable/removal, owner-window closure, business departure, or display changes ends its session. Visitor snapshots do not follow later changes on the sending device. Idle renderers stop physics work and may be reclaimed.
 
 对声明 realtime 的自身形象，`appearance.getState().own.realtime` 可返回 `{renderer,dataVersion,state}`；state 为 ready / missing-renderer / unsupported / unavailable。ready 表示配置与提供者可用，不承诺已经显示首帧。旧宿主或普通形象没有该字段，需检查可选值；`apiVersion:1`、类型包版本和方法存在本身不代表实际安装的宿主已支持新 kind。无可用 renderer 或运行失败时，本机继续普通动作。安装不自动换形象。
 
-本分支没有 npm 发布，没有可承诺的最低已发布宿主版本。M1b 只支持本机实时展示；既有串门继续普通动作协议，v1–v3 不含本字段。M2 须另行协商 renderer/data 版本、资源、容量和首帧准备，接收端只运行已安装且获准的代码，不能从对端接收并自动执行插件。This is an unreleased local-only candidate, not a cross-machine capability or a public host release.
+M2 候选的访客契约复用以上三个方法和 `init.instance.kind:'visitor'`，没有新增公开方法或权限。宿主通过现有认证来访通道协商实时数据能力，传送出发时的不可变数据和资源；普通动作 v1–v3 描述不增加 realtime 字段。接收端仅运行本地已安装、已授权且兼容数据版本的 renderer，独立绑定每位访客；不传送、安装或执行对端插件代码，也不跨机传送连续 RGBA 帧。抓取、轻放、抛出由接收端本地渲染，召回或离开会抢占抓取与自由落体并清理会话。
+
+缺少、未授权或不兼容 renderer 时，串门继续使用普通动作并提示暂不支持布偶拖拽；资源损坏或准备失败须明确失败，不能伪装成缺能力降级。可用实时访客须在普通帧解码与首个有效 idle 帧在宿主离屏准备画布绘制后 ACK 后才放行出发。本节描述未发布 M2 的预期兼容契约，不代表已完成跨机或 E2E 验收。本分支没有 npm 发布、市场登记或可承诺的最低已发布宿主版本；测试宿主分发边界不变。
+
+The unreleased M2 candidate binds a separate visitor session through the existing three render methods. The authenticated visit channel carries an immutable departure snapshot and data resources, while ordinary v1–v3 appearance descriptors remain unchanged. The receiver runs only a locally installed, authorized renderer compatible with that data version. Peer plugin code is never transferred, installed or executed; continuous RGBA frames stay local. Recall and departure cancel grabbing or falling and release the session.
+
+A missing, unauthorized or incompatible provider falls back to ordinary actions with a notice. Corrupt resources or failed preparation must fail explicitly. A supported realtime visitor requires ordinary-frame decoding and acknowledgement after drawing the first valid idle frame to the host preparation canvas before departure. These are candidate compatibility requirements, not completed cross-machine or E2E validation. No npm release, marketplace entry, minimum released host version or public host download is established here.

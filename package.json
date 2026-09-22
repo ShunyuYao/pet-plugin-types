@@ -24,7 +24,7 @@
     "frozen": true,
     "frozenMethods": 30,
     "experimentalMethods": 48,
-    "note": "30 frozen / 48 experimental public capabilities; realtime M1b adds three render-only methods and declarative renderer/asset contracts on an unreleased development branch. No minimum released host version, npm release or cross-machine realtime support is claimed. Existing work-only capabilities remain outside ordinary plugin roots."
+    "note": "30 frozen / 48 experimental public capabilities; M1b defines three render-only methods and declarative renderer/asset contracts. The unreleased M2 candidate also binds visitor instances without new methods. No minimum released host version, npm release or completed cross-machine validation is claimed. Existing work-only capabilities remain outside ordinary plugin roots."
   },
   "devDependencies": {
     "typescript": "5.9.3"

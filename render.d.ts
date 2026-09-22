@@ -25,7 +25,10 @@ export interface RealtimeAppearanceState {
 export interface RenderInitControl {
   type: 'init';
   session: string;
-  /** M1b creates host instances only; visitor is reserved for M2 and is not implemented yet. */
+  /**
+   * M1b creates host instances only. The unreleased M2 candidate also binds visitor instances.
+   * The host chooses the target; this union does not establish released-host compatibility.
+   */
   instance: { kind: 'host' | 'visitor' };
   /** Logical size in screen DIP, and output size in pixels. */
   size: number;
@@ -44,7 +47,7 @@ export interface RenderBeginControl {
   y: number;
   t: number;
   view: {
-    /** Screen anchor of the host window/character at grab start, in DIP. */
+    /** Screen origin of the bound character at grab start, in DIP, not the visitor carrier window. */
     x: number;
     y: number;
     clip: 'idle' | 'walk';
@@ -65,14 +68,19 @@ export interface RenderPointerControl {
   t: number;
 }
 
-/** @experimental A single ordered host control stream, scoped to the bound session. */
+/**
+ * @experimental A single ordered host control stream, scoped to the bound session.
+ * Preparation ack follows drawing to the host preparation canvas without replacing the
+ * ordinary pose. During active rendering, ack follows submission to the visible canvas.
+ */
 export type RenderControl = RenderInitControl | RenderBeginControl | RenderPointerControl
   | { type: 'cancel'; session: string; reason: string }
   | { type: 'ack'; session: string; seq: number };
 
 /**
  * @experimental One transparent RGBA frame. seq must increase; dimensions are integer 1–1024.
- * pixels.byteLength must equal width * height * 4. x/y are the screen anchor in DIP.
+ * pixels.byteLength must equal width * height * 4. x/y are the bound character's screen origin in DIP.
+ * Visitor frames are rendered locally on the receiver; continuous frames are not sent to the peer.
  * Session identity is bound by the host/preload, never supplied by the plugin.
  */
 export interface RenderFrame {
@@ -90,7 +98,9 @@ export interface PetRenderSurface {
   /** @experimental Subscribe before rendering. Returns a function that removes this subscription. */
   onControl(listener: (control: RenderControl) => void): () => void;
   /**
-   * @experimental Bounded frame channel; the first valid idle frame establishes readiness.
+   * @experimental Bounded frame channel. The first valid idle frame establishes readiness
+   * after drawing to the host preparation canvas and acknowledgement, without replacing
+   * the ordinary pose. Active rendering is acknowledged after visible-canvas submission.
    * Throws synchronously: render_not_initialized before init/after cancel, invalid_frame for
    * malformed frames, stale_frame for seq <= the last accepted sequence, frame_in_flight
    * while awaiting ack. Rejection does not consume seq. Pixels are tightly copied, without
