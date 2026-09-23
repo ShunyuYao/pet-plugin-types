@@ -14,7 +14,7 @@
  * | C 不开放 | 不在公开根对象中 | 运行时可能仍有实现（内置插件在用），但不作为对外契约，第三方不得依赖 |
  *
  * 本文件当前对应 `apiVersion: 1`（见 package.json 的 `petSdk`）。
- * A 档共 30 条、B 档 24 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
+ * A 档共 30 条、B 档 48 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
  * `services.provide`、`auth.openAuthWindow`、`pet.host.*`）**不在公开根对象中**。
  *
  * ## 返回值与注册方法
@@ -24,19 +24,21 @@
  *
  * ## 上下文差异
  *
- * 插件代码可能跑在三种上下文里，可用的命名空间**不一致**（这是有意设计，不是漏做）：
+ * 普通插件代码有三种上下文，另有专用 render 沙箱；可用的命名空间**不一致**：
  *
  * - `tool` —— 工具插件的 utilityProcess 子进程，能力最全
  * - `panel` —— 插件 panel 窗口（渲染层）
  * - `dashboard-card` —— 看板区块 iframe（渲染层，最受限）
+ * - `render` —— 专用实时形象沙箱，仅 {@link PetRender}，不继承通用 SDK
  *
  * 用 {@link PetTool} / {@link PetPanel} / {@link PetBlock} 三个类型按上下文取到精确的
  * 可用面；{@link Pet} 是三者的并集视图，上下文限定的成员标为可选。
- * 完整矩阵见 README 的「三上下文能力矩阵」。
+ * 完整矩阵见 README 的「上下文能力矩阵」。
  */
 
 export * from './manifest';
 export * from './theme';
+export * from './render';
 
 // ─────────────────────────────────────────────────────────────
 // storage —— 权限：`storage`。三上下文一致，A 档冻结。
@@ -944,7 +946,7 @@ export type DeactivateFn = () => void | Promise<void>;
 export interface AppearanceState {
   companion: { key: string; name: string };
   current: { key: string; name: string; isDefault: boolean; ownedByCaller: boolean };
-  own: { key: string; name: string };
+  own: { key: string; name: string; realtime?: import('./render').RealtimeAppearanceState };
   canRestore: boolean;
 }
 

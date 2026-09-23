@@ -1,6 +1,7 @@
 import type { Pet, PetTool, PetPanel, PetBlock, BadgeOptions, ComposeFileOptions } from '../index';
 import { definePluginManifest } from '../manifest';
 import type { ThemeDefinition, ThemeColors, ThemeRadius, ThemePluginManifest, PluginManifest } from '../index';
+import type { AppearanceRendererManifest, PetRender, RenderControl, RenderFrame, RealtimeAppearanceDescriptor } from '../index';
 
 declare const tool: PetTool;
 declare const panel: PetPanel;
@@ -187,3 +188,101 @@ const radius: ThemeRadius = 29;
 const fractional: ThemeRadius = 2.5;
 // @ts-expect-error Negative radii are not allowed.
 const negative: ThemeRadius = -1;
+
+// Dedicated realtime renderer: no ordinary SDK, no caller-selected session/target.
+declare const renderer: PetRender;
+const stopRenderControl: () => void = renderer.render.onControl(control => {
+  const session: string = control.session;
+  if (control.type === 'init') {
+    const instance: 'host' | 'visitor' = control.instance.kind;
+    const size: number = control.pixelSize;
+    const assets: Record<string, string> = control.appearance.assets;
+    // @ts-expect-error Personal model fields remain inside generic JSON data.
+    control.headScale;
+  } else if (control.type === 'begin') {
+    const flip: 1 | -1 = control.view.flip;
+    const shown: number | undefined = control.view.presentedSeq;
+  } else if (control.type === 'ack') {
+    const seq: number = control.seq;
+  }
+});
+const rgbaFrame: RenderFrame = { seq: 1, width: 1, height: 1, pixels: new Uint8Array(4), x: 0, y: 0, phase: 'idle' };
+const renderControls: RenderControl[] = [
+  { type: 'init', session: 's', instance: { kind: 'host' }, size: 200, pixelSize: 400,
+    workArea: { x: 0, y: 0, width: 1920, height: 1080 }, x: 100, y: 200,
+    appearance: { dataVersion: 2, data: { settings: [1, true, null] }, assets: { head: 'session-scoped-url' } } },
+  { type: 'begin', session: 's', x: 120, y: 230, t: 10,
+    view: { x: 100, y: 200, clip: 'idle', frame: 0, flip: -1, localX: 20, localY: 30 } },
+  { type: 'move', session: 's', x: 130, y: 240, t: 20 },
+  { type: 'end', session: 's', x: 130, y: 240, t: 30 },
+  { type: 'cancel', session: 's', reason: 'appearance_changed' },
+  { type: 'ack', session: 's', seq: 1 },
+];
+const frameSent: void = renderer.render.submitFrame(rgbaFrame);
+renderer.render.submitFrame({ ...rgbaFrame, pixels: new Uint8ClampedArray(4), phase: 'active' });
+const rendererFailed: void = renderer.render.fail('render_failed');
+stopRenderControl();
+// @ts-expect-error Render frames cannot select a different session.
+renderer.render.submitFrame({ ...rgbaFrame, session: 'another-session' });
+// @ts-expect-error Only RGBA typed arrays are allowed.
+renderer.render.submitFrame({ ...rgbaFrame, pixels: [0, 0, 0, 0] });
+// @ts-expect-error Physics phases are private renderer implementation details.
+renderer.render.submitFrame({ ...rgbaFrame, phase: 'falling' });
+// @ts-expect-error The render sandbox has no general storage SDK.
+renderer.storage.get('private');
+// @ts-expect-error The render sandbox cannot apply another appearance.
+renderer.appearance.apply();
+// @ts-expect-error The render sandbox has no network SDK.
+renderer.net.fetch('https://example.com');
+// @ts-expect-error Tools cannot submit render frames.
+tool.render.submitFrame(rgbaFrame);
+// @ts-expect-error Panels cannot control the dedicated render session.
+panel.render.fail('x');
+// @ts-expect-error Blocks cannot subscribe to render input.
+block.render.onControl(() => {});
+// @ts-expect-error The ordinary SDK union does not include the render sandbox.
+shared.render.submitFrame(rgbaFrame);
+// @ts-expect-error A begin input needs its authenticated view metadata.
+const incompleteBegin: RenderControl = { type: 'begin', session: 's', x: 0, y: 0, t: 0 };
+// @ts-expect-error The begin view includes the starting screen anchor.
+const missingBeginAnchor: RenderControl = { type: 'begin', session: 's', x: 0, y: 0, t: 0, view: { clip: 'idle', frame: 0, flip: 1, localX: 0, localY: 0 } };
+
+const rendererManifest: AppearanceRendererManifest = definePluginManifest({
+  id: 'sample-renderer', name: 'Renderer', version: '0.1.0', apiVersion: 1,
+  kind: ['appearance-renderer'], permissions: ['appearance:render'],
+  entry: { renderer: { src: 'renderer.html', apiVersion: 1, dataVersions: [1] } },
+});
+const explicitRenderer: PluginManifest<'appearance-renderer'> = rendererManifest;
+// @ts-expect-error A renderer cannot mix with executable tool kinds.
+definePluginManifest({ ...rendererManifest, kind: ['appearance-renderer', 'tool'] });
+// @ts-expect-error Exactly one explicit render permission is required.
+definePluginManifest({ ...rendererManifest, permissions: [] });
+// @ts-expect-error General plugin privileges are unavailable to renderer packages.
+definePluginManifest({ ...rendererManifest, permissions: ['appearance:render', 'storage'] });
+// @ts-expect-error A renderer must have its renderer entry.
+definePluginManifest({ ...rendererManifest, entry: {} });
+// @ts-expect-error A renderer cannot supply a panel entry.
+definePluginManifest({ ...rendererManifest, entry: { ...rendererManifest.entry, panel: { src: 'panel.html' } } });
+// @ts-expect-error Only render bridge version 1 is supported.
+definePluginManifest({ ...rendererManifest, entry: { renderer: { src: 'renderer.html', apiVersion: 2, dataVersions: [1] } } });
+// Data versions belong to the renderer; host bridge apiVersion remains 1.
+definePluginManifest({ ...rendererManifest, entry: { renderer: { src: 'renderer.html', apiVersion: 1, dataVersions: [2] } } });
+// @ts-expect-error At least one supported data version is required.
+definePluginManifest({ ...rendererManifest, entry: { renderer: { src: 'renderer.html', apiVersion: 1, dataVersions: [] } } });
+// @ts-expect-error Renderers do not consume services.
+definePluginManifest({ ...rendererManifest, services: [] });
+// @ts-expect-error Renderers cannot provide services.
+definePluginManifest({ ...rendererManifest, provides: { service: 'render' } });
+// @ts-expect-error Ordinary plugin kinds cannot claim renderer authority.
+definePluginManifest({ id: 'x', name: 'X', version: '0.1.0', kind: ['tool'], entry: { tool: 'index.js' }, permissions: ['appearance:render'] });
+
+const realtimeDescriptor: RealtimeAppearanceDescriptor = { renderer: 'sample-renderer', dataVersion: 1, data: 'realtime/data.json', assets: { head: 'realtime/head.png' } };
+// @ts-expect-error Data must be a package-relative JSON path, not executable or inline content.
+const inlineRealtimeData: RealtimeAppearanceDescriptor = { ...realtimeDescriptor, data: { headScale: 1 } };
+// @ts-expect-error The asset descriptor is not a renderer code entry.
+const executableRealtimeData: RealtimeAppearanceDescriptor = { ...realtimeDescriptor, src: 'renderer.html' };
+tool.appearance.getState().then(state => {
+  const status: 'ready' | 'missing-renderer' | 'unsupported' | 'unavailable' | undefined = state.own.realtime?.state;
+  // @ts-expect-error Renderer resources are not exposed through appearance state.
+  state.own.realtime?.assets;
+});
