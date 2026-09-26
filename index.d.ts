@@ -450,6 +450,27 @@ export interface CharacterSnapshot extends CharacterRevision {
 }
 
 /**
+ * @experimental `getRealtime()` 返回的单项实时外观资源。只有内容，不含任何路径。
+ * 图片 / 模型为 base64；`application/json` 也以 base64 给出，调用方自行解码与解析。
+ */
+export interface RealtimeAssetSnapshot {
+  contentType: 'image/png' | 'image/jpeg' | 'image/webp' | 'application/json' | 'model/gltf-binary' | 'application/octet-stream';
+  dataBase64: string;
+}
+
+/**
+ * @experimental 当前形象的实时外观只读快照（如布偶照片头、衣服贴图、轮廓数据）。
+ * `renderer` / `dataVersion` / `data` 与该形象 `character.json` 的 `realtime` 描述一致；
+ * `assets` 的键是描述里的资源 id。数据由对应 renderer 解释，宿主不认识具体字段。
+ */
+export interface RealtimeSnapshot extends CharacterRevision {
+  renderer: string;
+  dataVersion: number;
+  data: Record<string, unknown>;
+  assets: Record<string, RealtimeAssetSnapshot>;
+}
+
+/**
  * @experimental 读取并订阅宿主当前角色形象。
  *
  * 订阅是**长轮询**形态而非回调：`watch()` 拿一个订阅 id，反复 `next(id)` 取下一次
@@ -464,6 +485,13 @@ export interface PetCharacter {
    * 省略则只返回形象标识、不带姿势帧。权限：`character:read`。
    */
   getCurrent(options?: { states?: string[] }): Promise<CharacterSnapshot>;
+  /**
+   * @experimental 只读取当前形象的实时外观数据；没有 `realtime` 描述时为 `null`。
+   * 权限：`character:read`。不授予渲染或控制宠物的能力（那是 `appearance:render`）。
+   * 资源按注册时校验值重新核对，被替换或越界则失败（`CHARACTER_REALTIME_INVALID`）；
+   * 原始字节合计超过 12 MiB 为 `CHARACTER_REALTIME_TOO_LARGE`。未发布：旧宿主没有此方法，先探测。
+   */
+  getRealtime(): Promise<RealtimeSnapshot | null>;
   /** @experimental 开始订阅，返回订阅 id。权限：`character:watch`。 */
   watch(): Promise<string>;
   /**

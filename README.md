@@ -161,6 +161,7 @@ definePluginManifest({
 | `sessions` | `readTransfer` | — | — | — | — |
 | `sessions` | `leave` | — | — | — | — |
 | `character` | `getCurrent` | B | B | B | — |
+| `character` | `getRealtime` | B | B | B | — |
 | `character` | `watch` | B | B | B | — |
 | `character` | `next` | B | B | B | — |
 | `character` | `unwatch` | B | B | B | — |
@@ -470,3 +471,10 @@ Validation status (2026-09-22): a private macOS arm64 signed-ASAR candidate pass
 `pet-ragdoll-renderer` 使用现有实验 `PetRender` 三方法和声明式资源接口；它定义的 `dataVersion: 2` 将衣服贴图、轮廓及头像都放在角色包，公共 provider 不含形象素材。这是 provider 私有数据版本的变化，不是宿主桥 API 升级。兼容基线为受邀 macOS arm64 候选 `0.26.0-ragdoll.1`，旧 `0.26.0` 不支持。宿主仍仅受邀分发，不因插件公开而公开宿主。
 
 The independent provider uses the existing experimental three-method render bridge. Provider-owned appearance data v2 moves clothing textures, contours and portraits into the owning appearance package; it does not add a host SDK method or a scaffold permission. Compatibility is limited to the invited realtime-capable macOS arm64 candidate `0.26.0-ragdoll.1`; older `0.26.0` is unsupported. Publishing a provider does not publish host installers or an npm SDK version.
+
+## Realtime appearance read / 读取实时外观（实验，未发布）
+
+`pet.character.getRealtime(): Promise<RealtimeSnapshot | null>` 在 tool / panel / block（及宿主 HTML 作品）可用，复用 `character:read`。返回当前形象 `realtime` 描述对应的 `renderer`、`dataVersion`、已解析的 `data` 与全部资源（`{contentType, dataBase64}`），不含路径；没有实时描述的形象返回 `null`。只读：不授予 `appearance:render`，不能驱动或控制宠物。资源按注册时校验值重新核对，被替换或越界时失败；原始字节合计上限 12 MiB。
+
+Read-only snapshot of the current appearance's realtime data. It grants no rendering or pet control. This method is not in any released host yet: probe with `pet.capabilities.query('character.getRealtime')` or check the function exists, and fall back to `getCurrent` poses. Do not infer support from `apiVersion` 1 or this package version.
+
