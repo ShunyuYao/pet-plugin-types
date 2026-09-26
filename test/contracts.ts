@@ -286,3 +286,10 @@ tool.appearance.getState().then(state => {
   // @ts-expect-error Renderer resources are not exposed through appearance state.
   state.own.realtime?.assets;
 });
+
+// character.getRealtime: read-only, no arguments, null when the pet has no realtime data.
+const realtime: Promise<import('../index').RealtimeSnapshot | null> = panel.character.getRealtime();
+tool.character.getRealtime().then(v => { if (v) { const a = v.assets.head; const b64: string = a.dataBase64; const r: string = v.renderer; } });
+// @ts-expect-error Callers cannot choose another pet.
+block.character.getRealtime({ key: 'someone-else' });
+
