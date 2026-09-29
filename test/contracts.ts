@@ -2,11 +2,65 @@ import type { Pet, PetTool, PetPanel, PetBlock, BadgeOptions, ComposeFileOptions
 import { definePluginManifest } from '../manifest';
 import type { ThemeDefinition, ThemeColors, ThemeRadius, ThemePluginManifest, PluginManifest } from '../index';
 import type { AppearanceRendererManifest, PetRender, RenderControl, RenderFrame, RealtimeAppearanceDescriptor } from '../index';
+import type { PetWork, InputGameDefinition, InputSnapshot, WorkSdkDeclaration, InputStatusUpdate } from '../index';
+
+declare const work: PetWork;
+declare const renderInputTest: PetRender;
+const gamepadDefinition: InputGameDefinition = {
+  protocolVersion: 1, actionSchemaVersion: 1, title: 'Example game',
+  actions: { jump: { type: 'button', label: 'Jump' } },
+  bindings: { gameplay: { jump: [{ control: 'face.south' }] } },
+};
+work.input.connect(gamepadDefinition).then(connection => {
+  const snapshot: InputSnapshot = work.input.read(connection.sessionId);
+  if (snapshot.actions.jump.type === 'button') {
+    const presses: number = snapshot.actions.jump.pressCount;
+  }
+  work.input.setContext(connection.sessionId, 'text-entry');
+  const unsubscribe: () => void = work.input.onStatus(connection.sessionId, (status: InputStatusUpdate) => { status.presentation.layout; });
+  const opened: Promise<{ opened: boolean }> = work.input.openSettings(connection.sessionId);
+  const closed: Promise<void> = work.input.disconnect(connection.sessionId);
+  // @ts-expect-error Host control packets and raw device samples are private.
+  connection.config;
+});
+const workDeclaration: WorkSdkDeclaration = { version: 1, permissions: ['service:gamepad-input'] };
+const roomDeclaration: WorkSdkDeclaration = { version: 2, permissions: ['sessions:connect'], interaction: { players: 4, transport: 'lan', protocol: { id: 'test-room', version: 1 } } };
+work.sessions.send({ lane: 'latest', key: 'position', type: 'move', payload: { x: 1 }, to: '*' });
+work.sessions.poll({ cursor: 0, waitMs: 1000 }).then(batch => batch.events.forEach(event => { const peer: string | undefined = event.from; }));
+work.sessions.getContext().then(context => { const count: 3 | 4 | undefined = context?.maxPlayers; });
+work.storage.delete('old').then(deleted => { const value: boolean = deleted; });
+work.capabilities.request({ origin: 'https://example.com' });
+// @ts-expect-error Work cannot register an input provider.
+work.input.registerProvider({});
+// @ts-expect-error Work has only explicit service invocation, no proxy discovery.
+work.services.get('other');
+// @ts-expect-error Work cannot receive arbitrary plugin events.
+work.events.on('private', () => {});
+// @ts-expect-error Neither generic render nor blocks gain gamepad capture.
+renderInputTest.input.read('session');
+// @ts-expect-error Session latest lane requires a key.
+work.sessions.send({ lane: 'latest', type: 'move', payload: null });
+// @ts-expect-error Session reliable lane cannot set a latest-state key.
+work.sessions.send({ lane: 'reliable', key: 'state', type: 'move', payload: null });
+// @ts-expect-error v1 declarations cannot request sessions.
+const invalidWorkDeclaration: WorkSdkDeclaration = { version: 1, permissions: ['sessions:connect'] };
 
 declare const tool: PetTool;
 declare const panel: PetPanel;
 declare const block: PetBlock;
 declare const shared: Pet;
+
+tool.input.registerProvider({ protocolVersion: 1, mappingVersion: 1, layouts: ['standard'], defaults: { layout: 'playstation', deadzone: 0.2 } });
+definePluginManifest({ id: 'input-provider', name: 'Input', version: '0.1.0', kind: ['tool', 'panel'], permissions: ['input:provide', 'ui'], entry: { tool: 'index.js', panel: { src: 'panel.html' } } });
+// @ts-expect-error input:provide requires a tool entry, not a panel-only package.
+definePluginManifest({ id: 'input-panel', name: 'Input', version: '0.1.0', kind: ['panel'], permissions: ['input:provide'], entry: { panel: { src: 'panel.html' } } });
+panel.input.getConfig({ limit: 10 }).then(config => panel.input.updateConfig({ expectedRevision: config.revision, target: 'global', patch: { deadzone: 0.2 } }));
+// @ts-expect-error Panel cannot own a persistent provider.
+panel.input.registerProvider({});
+// @ts-expect-error A provider tool cannot read a game's capture session.
+tool.input.read('session');
+// @ts-expect-error Blocks do not gain provider or game capabilities.
+block.input.getConfig();
 
 const badge: BadgeOptions = { segments: [{ tone: 'warning', text: '1' }], onClick: 'openPanel' };
 const placed: Promise<boolean> = tool.badge.set(badge);
@@ -292,4 +346,3 @@ const realtime: Promise<import('../index').RealtimeSnapshot | null> = panel.char
 tool.character.getRealtime().then(v => { if (v) { const a = v.assets.head; const b64: string = a.dataBase64; const r: string = v.renderer; } });
 // @ts-expect-error Callers cannot choose another pet.
 block.character.getRealtime({ key: 'someone-else' });
-

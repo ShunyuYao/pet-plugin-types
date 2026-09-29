@@ -14,7 +14,7 @@
  * | C 不开放 | 不在公开根对象中 | 运行时可能仍有实现（内置插件在用），但不作为对外契约，第三方不得依赖 |
  *
  * 本文件当前对应 `apiVersion: 1`（见 package.json 的 `petSdk`）。
- * A 档共 30 条、B 档 48 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
+ * A 档共 30 条、B 档 59 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
  * `services.provide`、`auth.openAuthWindow`、`pet.host.*`）**不在公开根对象中**。
  *
  * ## 返回值与注册方法
@@ -24,11 +24,12 @@
  *
  * ## 上下文差异
  *
- * 普通插件代码有三种上下文，另有专用 render 沙箱；可用的命名空间**不一致**：
+ * 普通插件代码有三种上下文，另有专用 render 沙箱及 HTML work；可用的命名空间**不一致**：
  *
  * - `tool` —— 工具插件的 utilityProcess 子进程，能力最全
  * - `panel` —— 插件 panel 窗口（渲染层）
  * - `dashboard-card` —— 看板区块 iframe（渲染层，最受限）
+ * - `work` —— HTML 游戏作品，仅显式的 {@link PetWork} 能力
  * - `render` —— 专用实时形象沙箱，仅 {@link PetRender}，不继承通用 SDK
  *
  * 用 {@link PetTool} / {@link PetPanel} / {@link PetBlock} 三个类型按上下文取到精确的
@@ -39,6 +40,9 @@
 export * from './manifest';
 export * from './theme';
 export * from './render';
+export * from './input';
+export * from './work';
+import type { PetInputProvider, PetInputConfig } from './input';
 
 // ─────────────────────────────────────────────────────────────
 // storage —— 权限：`storage`。三上下文一致，A 档冻结。
@@ -388,8 +392,8 @@ export interface PetNet {
 
 // ─────────────────────────────────────────────────────────────
 // services —— 权限：`service:<name>` 逐服务声明。三上下文一致。
-// 注意：**消费**服务是 A 档；**提供**服务（`services.provide`）当前仅内置插件可用，
-// 判 C 档，不在本契约中。
+// 注意：get 消费入口是 A 档，invoke 是 B 档；services.provide 为 C 档，
+// 不在本契约中，不能依赖其运行时遗留实现。
 // ─────────────────────────────────────────────────────────────
 
 /** 服务代理：键为服务方法名，值为返回 Promise 的转发函数。 */
@@ -847,6 +851,8 @@ export interface PetCommon {
  * ```
  */
 export interface PetTool extends PetCommon {
+  /** @experimental Unreleased input provider; requires input:provide. */
+  input: PetInputProvider;
   /** @experimental Only this asset plugin's appearance; requires appearance permission. */
   appearance: PetAppearance;
   /** @experimental Account delegation is available only to tools with a registered service grant. */
@@ -874,6 +880,8 @@ export interface PetTool extends PetCommon {
  * `ui.openPanel` 在此不可用。
  */
 export interface PetPanel extends PetCommon {
+  /** @experimental Configure this plugin's registered provider; cannot capture a game's input. */
+  input: PetInputConfig;
   /**
    * @experimental Only this asset plugin's appearance; requires appearance permission.
    * 不含 `refresh`：重读素材要改宿主进程内的角色注册表，属常驻 tool 的职责，
@@ -930,6 +938,8 @@ export interface PetBlock extends PetCommon {
  * 可选成员会强制你先做存在性判断。
  */
 export interface Pet extends PetCommon {
+  /** @experimental Provider configuration on tool/panel; registration is tool-only. */
+  input?: PetInputConfig & Partial<Pick<PetInputProvider, 'registerProvider' | 'unregisterProvider'>>;
   /** @experimental tool/panel only. */
   appearance?: PetAppearance;
   ui: Omit<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'injectStyle'>

@@ -23,7 +23,7 @@ const checker = program.getTypeChecker();
 const source = program.getSourceFile(path.join(root, 'index.d.ts'));
 const exportsByName = new Map(checker.getExportsOfModule(checker.getSymbolAtLocation(source)).map(s => [s.name, s]));
 const publicEntries = SURFACE.filter(e => e.tier !== 'closed');
-const contexts = [['tool', 'PetTool'], ['panel', 'PetPanel'], ['block', 'PetBlock'], ['render', 'PetRender']];
+const contexts = [['tool', 'PetTool'], ['panel', 'PetPanel'], ['block', 'PetBlock'], ['render', 'PetRender'], ['work', 'PetWork']];
 for (const method of ['onControl', 'submitFrame', 'fail']) {
   const entry = publicEntries.find(e => e.ns === 'render' && e.method === method);
   assert(entry, `render.${method}: missing public contract`);
@@ -46,7 +46,7 @@ for (const [context, name] of contexts) {
       const signature = checker.getSignaturesOfType(methodType, ts.SignatureKind.Call)[0];
       assert(signature, `${name}.${key}: must be callable`);
       if (entry?.argSpec) assert.equal(signature.parameters.length, entry.argSpec.length, `${name}.${key}: argument count`);
-      if (entry?.tier === 'experimental') {
+      if ((entry?.contextTiers?.[context] || entry?.tier) === 'experimental') {
         assert(ts.getJSDocTags(signature.declaration).some(tag => tag.tagName.text === 'experimental'), `${name}.${key}: missing @experimental`);
       }
     }
@@ -66,10 +66,10 @@ for (const readme of readmes) {
   assert(region, `${readme}: missing SDK matrix markers`);
   const rows = [];
   for (const line of region[1].split('\n')) {
-    const m = /^\| `([^`]+)` \| `([^`]+)` \| ([AB—]) \| ([AB—]) \| ([AB—]) \| ([AB—]) \|$/.exec(line);
+    const m = /^\| `([^`]+)` \| `([^`]+)` \| ([AB—]) \| ([AB—]) \| ([AB—]) \| ([AB—]) \| ([AB—]) \|$/.exec(line);
     if (m) rows.push(`${m[1] === '(root)' ? '' : m[1] + '.'}${m[2]}:${m.slice(3).join(',')}`);
   }
-  const expected = publicEntries.map(e => `${e.ns ? e.ns + '.' : ''}${e.method}:${contexts.map(([c]) => e.contexts.includes(c) ? (e.tier === 'frozen' ? 'A' : 'B') : '—').join(',')}`);
+  const expected = publicEntries.map(e => `${e.ns ? e.ns + '.' : ''}${e.method}:${contexts.map(([c]) => e.contexts.includes(c) ? ((e.contextTiers?.[c] || e.tier) === 'frozen' ? 'A' : 'B') : '—').join(',')}`);
   assert.deepEqual(rows.sort(), expected.sort(), `${readme}: public documentation matrix differs`);
   console.log(`PASS ${path.basename(path.dirname(readme))} documentation: ${rows.length} public entries`);
 }
@@ -93,6 +93,23 @@ try {
   assert.throws(() => check({ ...base, activation: true }), /activation/);
   assert.throws(() => check({ ...base, entry: { ...base.entry, panel: { src: 'panel.html', transparent: 'yes' } } }), /transparent/);
   console.log('PASS real host manifest: valid declarations accepted, invalid declarations rejected');
+
+  const inputManifest = { ...base, permissions: ['input:provide', 'ui'] };
+  assert(manifest.requestedGrants(check(inputManifest)).includes('input:provide'));
+  assert.throws(() => check({ ...inputManifest, kind: ['panel'], entry: { panel: { src: 'panel.html' } } }));
+  const { normalizeGameDefinition, normalizeProviderDefinition, normalizeConfigPatch } = require(path.resolve(hostDir, 'core/input/contracts.js'));
+  const provider = normalizeProviderDefinition({ protocolVersion: 1, mappingVersion: 1, layouts: ['standard'], defaults: { layout: 'playstation' } });
+  const game = normalizeGameDefinition({ protocolVersion: 1, actionSchemaVersion: 1, title: 'Input contract', actions: { jump: { type: 'button', label: 'Jump' } }, bindings: { gameplay: { jump: [{ control: 'face.south' }] } } });
+  assert.equal(provider.defaults.layout, 'playstation');
+  assert.equal(game.actions.jump.type, 'button');
+  assert.throws(() => normalizeProviderDefinition({ ...provider, layouts: ['unknown'] }));
+  assert.throws(() => normalizeConfigPatch({ deadzone: 0.9 }));
+  assert.throws(() => normalizeGameDefinition({ ...game, gameKey: 'spoofed' }));
+  const { parseDeclaration } = require(path.resolve(hostDir, 'core/html-card/sdk-policy.js'));
+  const workDeclaration = { version: 1, permissions: ['service:gamepad-input'] };
+  assert.deepEqual(parseDeclaration(`<script type="application/json" id="pet-sdk">${JSON.stringify(workDeclaration)}</script>`).permissions, workDeclaration.permissions);
+  assert.throws(() => parseDeclaration('<script type="application/json" id="pet-sdk">{"version":1,"permissions":["input:provide"]}</script>'));
+  console.log('PASS real host input: provider declaration, bounded contracts and work consumption permission');
 
   const rendererManifest = { id: 'sample-renderer', name: 'Renderer', version: '0.1.0', apiVersion: 1,
     kind: ['appearance-renderer'], permissions: ['appearance:render'],
