@@ -46,6 +46,7 @@ export type FrozenPermission =
  * `files:open`）。用得了，但要跟版本。
  */
 export type ExperimentalPermission =
+  | 'input:provide'
   | `account:authorize:${string}`
   | 'ui:theme'
   | 'appearance'
@@ -165,8 +166,8 @@ export interface PluginManifestBase {
   /**
    * 要消费的服务名。宿主授权时展开为 `service:<name>`。
    *
-   * 注意：**提供**服务（`services.provide`）当前仅内置插件可用，
-   * 第三方插件只能消费。
+   * services.provide 是未公开 C 档能力，不得依赖运行时遗留实现。
+   * gamepad-input 为宿主保留名，不可通过通用服务冒用或绕过 pet.input。
    */
   services?: string[];
 }
@@ -193,9 +194,11 @@ export interface PluginManifestBase {
  * ```
  */
 type ExecutablePluginManifest<K extends PluginKind> =
-  PluginManifestBase & {
+  Omit<PluginManifestBase, 'permissions'> & {
     /** 非空子集 */
     kind: K[];
+    /** input:provide requires a tool entry; a panel may configure its own tool's provider. */
+    permissions?: Array<Exclude<PluginPermission, 'ui:theme' | 'appearance:render' | 'input:provide'> | ('tool' extends K ? 'input:provide' : never)>;
   } & RequiredProvides<K> & EntryField<K>;
 
 /**

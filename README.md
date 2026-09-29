@@ -8,7 +8,7 @@
 > `docs/plugin-sdk-freeze-review.md`（冻结方案决定版）。两者不一致时以宿主仓库为准，
 > 本包按 bug 处理。
 
-**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 48 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
+**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 59 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
 
 实时形象 M1b 与访客 M2 的类型和文档属于候选开发分支，尚未发布 npm 包或宿主构建，不声明最低支持版本。The realtime M1b and visitor M2 definitions are unreleased development candidates; neither the package version nor apiVersion 1 proves host support.
 
@@ -53,7 +53,7 @@ B 档方法的变更**不**强制升 `apiVersion`（这正是 `@experimental` �
 语义变更必须升。
 
 公开 SDK 根对象排除的 C 档能力：`ui.injectStyle`（主题将改为语义 Token 覆写，不再是裸 CSS 注入）、
-`pet.meetingCard`（将被声明式聊天卡片 API 泛化）、`services.provide`（当前仅内置插件可用）、
+`pet.meetingCard`（将被声明式聊天卡片 API 泛化）、`services.provide`（C 档未公开，不得依赖运行时遗留实现）、
 `auth.openAuthWindow` 与 `pet.host.*`（内置特权面，属后续降权对象）。
 
 ## 返回值与注册方法
@@ -145,90 +145,100 @@ definePluginManifest({
 
 ## 上下文能力矩阵
 
-普通插件有 tool/panel/dashboard-card 三种上下文，实时渲染使用独立 render 沙箱和 `PetRender` 类型。render 只提供 `pet.render`，不继承普通 `Pet` 或 `PetCommon`。以下能力差异是有意的生命周期和权限边界。
+普通插件有 tool/panel/dashboard-card 三种上下文，实时渲染使用独立 render 沙箱和 `PetRender` 类型；HTML 游戏作品使用独立 `PetWork`。render/work 都不继承普通 `Pet` 或 `PetCommon`。以下五列差异是有意的生命周期和权限边界；work 的 storage 是 B 档，其余插件 storage 保持 A 档。
 
 <!-- sdk-surface:start -->
-| 命名空间 | 方法 | tool | panel | dashboard-card | render |
-|---|---|:--:|:--:|:--:|:--:|
-| `render` | `onControl` | — | — | — | B |
-| `render` | `submitFrame` | — | — | — | B |
-| `render` | `fail` | — | — | — | B |
-| `sessions` | `getContext` | — | — | — | — |
-| `sessions` | `join` | — | — | — | — |
-| `sessions` | `send` | — | — | — | — |
-| `sessions` | `poll` | — | — | — | — |
-| `sessions` | `transfer` | — | — | — | — |
-| `sessions` | `readTransfer` | — | — | — | — |
-| `sessions` | `leave` | — | — | — | — |
-| `character` | `getCurrent` | B | B | B | — |
-| `character` | `getRealtime` | B | B | B | — |
-| `character` | `watch` | B | B | B | — |
-| `character` | `next` | B | B | B | — |
-| `character` | `unwatch` | B | B | B | — |
-| `capabilities` | `query` | B | B | B | — |
-| `capabilities` | `request` | — | — | — | — |
-| `services` | `invoke` | B | B | B | — |
-| `appearance` | `getState` | B | B | — | — |
-| `appearance` | `apply` | B | B | — | — |
-| `appearance` | `reset` | B | B | — | — |
-| `appearance` | `refresh` | B | — | — | — |
-| `account` | `getState` | B | — | — | — |
-| `account` | `authorize` | B | — | — | — |
-| `storage` | `get` | A | A | A | — |
-| `storage` | `set` | A | A | A | — |
-| `storage` | `delete` | A | A | A | — |
-| `storage` | `all` | A | A | A | — |
-| `secrets` | `get` | A | — | — | — |
-| `secrets` | `set` | A | — | — | — |
-| `secrets` | `delete` | A | — | — | — |
-| `pet` | `bubble` | A | A | A | — |
-| `pet` | `playAnim` | A | A | A | — |
-| `pet` | `getAnimations` | B | B | B | — |
-| `pet` | `speak` | A | A | A | — |
-| `badge` | `set` | B | — | — | — |
-| `badge` | `clear` | B | — | — | — |
-| `ui` | `dialog` | A | A | A | — |
-| `ui` | `taskCheck` | B | B | B | — |
-| `ui` | `copyText` | A | A | A | — |
-| `ui` | `openPanel` | A | — | — | — |
-| `ui` | `closePanel` | A | A | — | — |
-| `ui` | `setPanelPinned` | B | B | — | — |
-| `events` | `on` | A | A | A | — |
-| `events` | `emit` | A | A | A | — |
-| `scheduler` | `every` | A | — | — | — |
-| `scheduler` | `daily` | A | — | — | — |
-| `scheduler` | `cancel` | A | — | — | — |
-| `net` | `fetch` | A | — | — | — |
-| `services` | `get` | A | A | A | — |
-| `settings` | `get` | A | A | A | — |
-| `ai` | `chat` | B | B | B | — |
-| `files` | `pick` | B | B | — | — |
-| `files` | `stat` | B | B | — | — |
-| `files` | `open` | B | B | — | — |
-| `files` | `list` | B | B | — | — |
-| `files` | `revoke` | B | B | — | — |
-| `files` | `pin` | B | B | — | — |
-| `files` | `unpin` | B | B | — | — |
-| `clipboard` | `startHistory` | B | — | — | — |
-| `clipboard` | `stopHistory` | B | — | — | — |
-| `clipboard` | `query` | B | B | — | — |
-| `clipboard` | `read` | B | B | — | — |
-| `clipboard` | `copy` | B | B | — | — |
-| `clipboard` | `markReferenced` | B | B | — | — |
-| `clipboard` | `remove` | B | B | — | — |
-| `clipboard` | `clearHistory` | B | B | — | — |
-| `errands` | `composeFile` | B | B | — | — |
-| `friends` | `me` | A | A | A | — |
-| `friends` | `list` | A | A | A | — |
-| `friends` | `isFriend` | A | A | A | — |
-| `friends` | `avatar` | A | A | A | — |
-| `activity` | `getLatest` | B | B | B | — |
-| `activity` | `connectionInfo` | B | B | B | — |
-| `dashboard` | `requestHeight` | A | — | A | — |
-| `dashboard` | `notifyReady` | A | — | A | — |
-| `tools` | `register` | A | — | — | — |
-| `calendar` | `registerProvider` | B | — | — | — |
-| `(root)` | `context` | — | — | A | — |
+| Namespace | Method | tool | panel | block | render | work |
+|---|---|---|---|---|---|---|
+| `input` | `registerProvider` | B | — | — | — | — |
+| `input` | `getConfig` | B | B | — | — | — |
+| `input` | `updateConfig` | B | B | — | — | — |
+| `input` | `unregisterProvider` | B | — | — | — | — |
+| `input` | `connect` | — | — | — | — | B |
+| `input` | `read` | — | — | — | — | B |
+| `input` | `setContext` | — | — | — | — | B |
+| `input` | `onStatus` | — | — | — | — | B |
+| `input` | `openSettings` | — | — | — | — | B |
+| `input` | `disconnect` | — | — | — | — | B |
+| `render` | `onControl` | — | — | — | B | — |
+| `render` | `submitFrame` | — | — | — | B | — |
+| `render` | `fail` | — | — | — | B | — |
+| `sessions` | `getContext` | — | — | — | — | B |
+| `sessions` | `join` | — | — | — | — | B |
+| `sessions` | `send` | — | — | — | — | B |
+| `sessions` | `poll` | — | — | — | — | B |
+| `sessions` | `transfer` | — | — | — | — | B |
+| `sessions` | `readTransfer` | — | — | — | — | B |
+| `sessions` | `leave` | — | — | — | — | B |
+| `character` | `getCurrent` | B | B | B | — | B |
+| `character` | `getRealtime` | B | B | B | — | B |
+| `character` | `watch` | B | B | B | — | B |
+| `character` | `next` | B | B | B | — | B |
+| `character` | `unwatch` | B | B | B | — | B |
+| `capabilities` | `query` | B | B | B | — | B |
+| `capabilities` | `request` | — | — | — | — | B |
+| `services` | `invoke` | B | B | B | — | B |
+| `appearance` | `getState` | B | B | — | — | — |
+| `appearance` | `apply` | B | B | — | — | — |
+| `appearance` | `reset` | B | B | — | — | — |
+| `appearance` | `refresh` | B | — | — | — | — |
+| `account` | `getState` | B | — | — | — | B |
+| `account` | `authorize` | B | — | — | — | B |
+| `storage` | `get` | A | A | A | — | B |
+| `storage` | `set` | A | A | A | — | B |
+| `storage` | `delete` | A | A | A | — | B |
+| `storage` | `all` | A | A | A | — | B |
+| `secrets` | `get` | A | — | — | — | — |
+| `secrets` | `set` | A | — | — | — | — |
+| `secrets` | `delete` | A | — | — | — | — |
+| `pet` | `bubble` | A | A | A | — | — |
+| `pet` | `playAnim` | A | A | A | — | — |
+| `pet` | `getAnimations` | B | B | B | — | — |
+| `pet` | `speak` | A | A | A | — | — |
+| `badge` | `set` | B | — | — | — | — |
+| `badge` | `clear` | B | — | — | — | — |
+| `ui` | `dialog` | A | A | A | — | — |
+| `ui` | `taskCheck` | B | B | B | — | — |
+| `ui` | `copyText` | A | A | A | — | — |
+| `ui` | `openPanel` | A | — | — | — | — |
+| `ui` | `closePanel` | A | A | — | — | — |
+| `ui` | `setPanelPinned` | B | B | — | — | — |
+| `events` | `on` | A | A | A | — | — |
+| `events` | `emit` | A | A | A | — | — |
+| `scheduler` | `every` | A | — | — | — | — |
+| `scheduler` | `daily` | A | — | — | — | — |
+| `scheduler` | `cancel` | A | — | — | — | — |
+| `net` | `fetch` | A | — | — | — | — |
+| `services` | `get` | A | A | A | — | — |
+| `settings` | `get` | A | A | A | — | — |
+| `ai` | `chat` | B | B | B | — | — |
+| `files` | `pick` | B | B | — | — | — |
+| `files` | `stat` | B | B | — | — | — |
+| `files` | `open` | B | B | — | — | — |
+| `files` | `list` | B | B | — | — | — |
+| `files` | `revoke` | B | B | — | — | — |
+| `files` | `pin` | B | B | — | — | — |
+| `files` | `unpin` | B | B | — | — | — |
+| `clipboard` | `startHistory` | B | — | — | — | — |
+| `clipboard` | `stopHistory` | B | — | — | — | — |
+| `clipboard` | `query` | B | B | — | — | — |
+| `clipboard` | `read` | B | B | — | — | — |
+| `clipboard` | `copy` | B | B | — | — | — |
+| `clipboard` | `markReferenced` | B | B | — | — | — |
+| `clipboard` | `remove` | B | B | — | — | — |
+| `clipboard` | `clearHistory` | B | B | — | — | — |
+| `errands` | `composeFile` | B | B | — | — | — |
+| `friends` | `me` | A | A | A | — | — |
+| `friends` | `list` | A | A | A | — | — |
+| `friends` | `isFriend` | A | A | A | — | — |
+| `friends` | `avatar` | A | A | A | — | — |
+| `activity` | `getLatest` | B | B | B | — | — |
+| `activity` | `connectionInfo` | B | B | B | — | — |
+| `dashboard` | `requestHeight` | A | — | A | — | — |
+| `dashboard` | `notifyReady` | A | — | A | — | — |
+| `tools` | `register` | A | — | — | — | — |
+| `calendar` | `registerProvider` | B | — | — | — | — |
+| `(root)` | `context` | — | — | A | — | — |
 <!-- sdk-surface:end -->
 
 裁剪理由（一句话版）：
@@ -287,7 +297,7 @@ PET_PLUGIN_HOST_DIR=/path/to/desktop-pet/demo npm run test:delivery
 ```
 
 `npm test` 是离线编译正反例，验证合法调用与非法上下文/参数。
-`test:delivery` 必须提供本地宿主源码，完整比对 tool/panel/block/render 四种上下文的公开方法、参数数量、实验标记、
+`test:delivery` 必须提供本地宿主源码，完整比对 tool/panel/block/render/work 五种上下文的公开方法、参数数量、按上下文的实验标记、
 包内计数和本 README 表格，并用真实宿主校验 manifest。宿主缺失直接失败，**不会 SKIP**。
 网络准备与离线门禁分开；交付时先固定并记录宿主提交，再运行测试。
 
@@ -323,11 +333,11 @@ true 只允许自动检查和提醒，**每次下载、安装仍需用户在宿�
 
 ## Account delegation / 插件账号授权（实验，未发布）
 
-`pet.account.getState({serviceId})` 与 `pet.account.authorize({serviceId,challengeId,codeChallenge})` 仅 tool 可用，需 `account:authorize:<serviceId>` 权限，且该服务已在宿主与账号服务登记。新方法未包含在已发布宿主中；请探测能力并明确提示暂不可用，不能仅凭 apiVersion 1 推断支持，也不要虚填 minHostVersion。基础模板不自动申请这项权限。
+`pet.account.getState({serviceId})` 与 `pet.account.authorize({serviceId,challengeId,codeChallenge})` tool 与增强 HTML work 可用，需 `account:authorize:<serviceId>` 权限，且该服务已在宿主与账号服务登记。新方法未包含在已发布宿主中；请探测能力并明确提示暂不可用，不能仅凭 apiVersion 1 推断支持，也不要虚填 minHostVersion。基础模板不自动申请这项权限。
 
 `getState` 返回本机 `signedIn / uid / revision`，UID 不是认证凭据。`authorize` 返回 60 秒内有效的一次性 `code / expiresIn / revision`；每次生成新的随机 PKCE verifier，并传 S256 挑战。仅目标服务后端可兑换授权码，插件不得读取或获取宿主 access / refresh token。
 
-Games must keep their own session in the tool process and send only display data to panels. Recheck account revision while active and before protected operations. Discard stale responses on account changes or deactivation; preserve editing drafts under their original owner. Normal account-token refresh does not change revision. The service checks the parent account session on each protected operation; grants expire within 10 minutes. Server-confirmed logout invalidates the authorization. An offline logout or failed revocation stops local requests immediately, but an existing server grant may survive until its original expiry, at most 10 minutes.
+Tool plugins keep their service session in the tool process and send only display data to panels. Enhanced HTML works keep their own service session within their work scope; neither context receives host credentials. Recheck account revision while active and before protected operations. Discard stale responses on account changes or deactivation; preserve editing drafts under their original owner. Normal account-token refresh does not change revision. The service checks the parent account session on each protected operation; grants expire within 10 minutes. Server-confirmed logout invalidates the authorization. An offline logout or failed revocation stops local requests immediately, but an existing server grant may survive until its original expiry, at most 10 minutes.
 
 Errors are returned as `Error.message`: `not_logged_in`, `permission_denied`, `service_unavailable`, `account_changed`, `network`, `invalid_request`, `busy`, `plugin_inactive`, `rate_limited`. Missing service registration fails closed; there is no fallback login or arbitrary authorization URL.
 
@@ -478,3 +488,66 @@ The independent provider uses the existing experimental three-method render brid
 
 Read-only snapshot of the current appearance's realtime data. It grants no rendering or pet control. This method is not in any released host yet: probe with `pet.capabilities.query('character.getRealtime')` or check the function exists, and fall back to `getCurrent` poses. Do not infer support from `apiVersion` 1 or this package version.
 
+
+## 通用手柄输入 / Action input（experimental，未发布）
+
+2026-09-29 候选新增 `input` 10 个 B 档方法。`input.d.ts` 声明输入数据和方法，`work.d.ts` 补齐 HTML 作品独立根；普通 plugin 根没有 work 的输入捕获或联机会话权限。`apiVersion: 1`、源码包版本和手柄协议 1 均不证明旧宿主支持；本轮没有 npm 发布、最低已发布宿主版本或硬件兼容承诺。
+
+The September 29 candidate adds ten experimental input methods and a separate HTML-work type root. This is unreleased source, not a published npm package or a minimum supported host release. Input protocol 1, package version and host apiVersion are independent; none proves hardware compatibility.
+
+| Context | Input methods | Permission |
+| --- | --- | --- |
+| tool | registerProvider, getConfig, updateConfig, unregisterProvider | input:provide |
+| panel | getConfig, updateConfig | input:provide; panel entry also needs ui |
+| work | connect, read, setContext, onStatus, openSettings, disconnect | service:gamepad-input |
+| block / render | None | No input authority |
+
+提供方必须包含 tool 入口，身份由宿主绑定；panel 只改自己提供方的配置，关面板不会停输入。第一次已授权登记选择提供方，后来的插件不能抢占。默认值不覆盖旧偏好；updateConfig 用 expectedRevision 原子比较写入，写失败不广播，逐游戏 target 只接受宿主登记的 gameKey。全局绑定限通用 ui.*，自定义动作在逐游戏层配置；实际合并后的映射也校验类型和冲突。
+
+A provider must have a tool entry. Identity and selection belong to the host, and panels configure only their own provider. Registration preserves preferences. Configuration changes use atomic revision/CAS updates; failure keeps the old active configuration. Game targets are host-issued identities; global bindings use only common ui.* actions, while custom actions are configured per game. Closing a panel does not stop its provider.
+
+高频采样与 read 留在游戏的隔离 preload 中，不逐帧调用提供方/主进程。游戏声明动作并保留键鼠路径；失焦、断连、撤权或提供方失败会中和，resetRevision 变化时须取消旧持续动作并推进 press/release 消费基线。强制中和不伪造物理 releaseCount，避免蓄力误发招。重新启用先等待回中；gameplay 中的新配置到菜单/暂停才整体生效，onStatus 报 pendingRevision。提示取 presentation 的有限文本/glyph，不能假定按钮数组下标或具体品牌。
+
+Sampling and synchronous read remain inside the work preload. Games retain keyboard/mouse paths and consume monotonic edges once. Focus loss, disconnection, revocation and provider failure cancel held actions without synthesizing a physical release. On resetRevision changes, cancel gameplay and advance consumption baselines. Restoration requires neutral controls; configuration changes wait for a menu/pause boundary and report pendingRevision. Use presentation labels/glyphs for prompts.
+
+HTML 沿用 v1/v2 的 service:gamepad-input 权限，并探测 pet.input 后回退键鼠。该服务名是宿主保留名；不得通过 services.provide/get/invoke 冒用，通用 provide 仍为 C 档未公开。work 没有通用 events/get 服务代理。work.sessions 类型反映已有 2–4 人实际契约，不能由此推断旧宿主支持 3–4 人声明。
+
+HTML keeps the existing named-service permission and feature-detects pet.input. gamepad-input is reserved and cannot be impersonated or accessed through generic service discovery/invocation. Generic services.provide remains closed. Work receives no generic plugin events or service proxies; its session types reflect the current 2–4 player contract, not compatibility with older hosts.
+
+首轮真机目标是 macOS + PS5 DualSense；Xbox、PS4/PS5 是计划支持范围，USB/蓝牙、原生焦点和具体型号仍需单独记录证据。纯 Node/类型/示例编译不证明设备兼容。当前数据格式只接受浏览器 standard mapping；auto 无可靠型号信息时显示通用标签，手动 Xbox/PlayStation 标签也不改变物理映射。没有震动、陀螺仪、自适应扳机或同机多人契约。
+
+The first hardware target is macOS with PS5 DualSense. Planned Xbox/PS4/PS5 coverage still requires model, OS and USB/Bluetooth evidence. Unit/type/example compilation is not hardware validation. This candidate accepts standard Gamepad mappings only; label preferences do not change physical mappings. Haptics, gyro, adaptive triggers and local multiplayer are outside this contract.
+
+
+## HTML account authorization / HTML 账号授权（未发布候选）
+
+The account capability is now available in the enhanced HTML `work` context as well as plugin `tool`; panel/block remain unsupported. This is a context extension of the existing experimental methods, not a new authentication protocol. No published host/package compatibility is claimed.
+
+增强 HTML 可声明 `account:authorize:cat-leaderboard`（或另一个已登记服务），再由用户通过可信宿主授权界面批准。调用 `pet.account.getState({serviceId})` 读取 `{signedIn,uid,revision}`；`pet.account.authorize({serviceId,challengeId,codeChallenge})` 返回一次性 `{code,expiresIn,revision}`。`PetAccount` 是两种上下文共用的账号能力类型，`PetWork.account` 显式复用它，不继承其他 tool 能力。权限声明不等于授权；授权仅对应指定服务，不能继承别的作品、插件或账号权限。
+
+UID identifies an account; it is not proof of ownership. The registered service backend exchanges the short-lived code with PKCE and revalidates the parent session. Host access/refresh tokens never enter an HTML work or service backend. Closing/revoking a work or switching accounts cancels pending authorization.
+
+HTML 只在用户主动启用相关功能时调用 `capabilities.request({})`。新增网络许可会重载页面，须在游戏开局或编辑草稿之前完成；拒绝或能力不支持时保留本地功能，不能伪造登录或降级创建匿名参榜身份。账号查询本身不会弹出授权，也不会提供登录凭据。
+
+| Method | tool | panel | block | work | Permission |
+|---|---|---|---|---|---|
+| account.getState | experimental | — | — | experimental | account:authorize:<serviceId> |
+| account.authorize | experimental | — | — | experimental | account:authorize:<serviceId> |
+
+No new method is added: method counts and apiVersion remain unchanged. Base scaffold permissions are unchanged. Host and account service support must be detected at runtime; this documentation does not establish a minimum released host version.
+
+旧宿主若尚不识别 `account:authorize:<serviceId>`，会在读取声明时拒绝整份 HTML，运行时方法探测无法补救；需要兼容它们时保留无账号权限声明的作品版本。纯手柄示例沿用旧命名服务权限的兼容路径不受此影响。
+
+Older hosts that do not recognize the account permission reject the HTML declaration before scripts run; feature detection alone cannot provide fallback. Retain a build without account permissions when supporting those hosts. The controller-only example's existing named-service permission path is unchanged.
+
+
+
+### 本机 HTML 授权记忆 / Local HTML grant memory（未发布候选）
+
+本机预览的已批准权限可按当前账号作用域、作品字节摘要和完整声明记忆；重开相同内容无需重复批准。作品内容或声明变化、账号切换不会继承该授权，收到的作品仍按其来源单独隔离。撤权保持到用户明确重新批准；不能将相同标题、文件名或游戏自报 id 当作授权身份。此记忆只复用已批准能力，不扩大手柄、存储或账号能力权限，也不新增公开 SDK 方法。输入配置、游戏私有存储和调用者生命周期仍按各自原有作用域处理。
+
+Approved local-preview grants may be remembered for the current account scope, exact work content hash and complete declaration. Changed content/declarations or another account do not inherit approval; received works retain source isolation. Revocation remains until explicit approval. Names and self-declared game ids are not authority. This reuses approval without expanding input, storage or account authority. It adds no public SDK method; input preferences, private storage and caller lifetimes retain their existing scopes.
+
+这次同步不增加公开方法总数（仍为30个A档、59个B档），仅使work入口从25增至27项；手柄输入10方法、三种普通插件及render隔离保持原契约。授权记忆与账号扩展均需实际候选宿主验证，不据文档推断已发布兼容版本。
+
+The public method count remains 30 frozen and 59 experimental; work gains the two existing account methods, increasing its exposed members from 25 to 27. Input's ten methods and ordinary-plugin/render boundaries are unchanged. These candidate semantics require host verification and do not establish a released compatibility version.
