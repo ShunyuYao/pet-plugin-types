@@ -182,8 +182,8 @@ definePluginManifest({
 | `appearance` | `apply` | B | B | — | — | — |
 | `appearance` | `reset` | B | B | — | — | — |
 | `appearance` | `refresh` | B | — | — | — | — |
-| `account` | `getState` | B | — | — | — | — |
-| `account` | `authorize` | B | — | — | — | — |
+| `account` | `getState` | B | — | — | — | B |
+| `account` | `authorize` | B | — | — | — | B |
 | `storage` | `get` | A | A | A | — | B |
 | `storage` | `set` | A | A | A | — | B |
 | `storage` | `delete` | A | A | A | — | B |
@@ -333,11 +333,11 @@ true 只允许自动检查和提醒，**每次下载、安装仍需用户在宿�
 
 ## Account delegation / 插件账号授权（实验，未发布）
 
-`pet.account.getState({serviceId})` 与 `pet.account.authorize({serviceId,challengeId,codeChallenge})` 仅 tool 可用，需 `account:authorize:<serviceId>` 权限，且该服务已在宿主与账号服务登记。新方法未包含在已发布宿主中；请探测能力并明确提示暂不可用，不能仅凭 apiVersion 1 推断支持，也不要虚填 minHostVersion。基础模板不自动申请这项权限。
+`pet.account.getState({serviceId})` 与 `pet.account.authorize({serviceId,challengeId,codeChallenge})` tool 与增强 HTML work 可用，需 `account:authorize:<serviceId>` 权限，且该服务已在宿主与账号服务登记。新方法未包含在已发布宿主中；请探测能力并明确提示暂不可用，不能仅凭 apiVersion 1 推断支持，也不要虚填 minHostVersion。基础模板不自动申请这项权限。
 
 `getState` 返回本机 `signedIn / uid / revision`，UID 不是认证凭据。`authorize` 返回 60 秒内有效的一次性 `code / expiresIn / revision`；每次生成新的随机 PKCE verifier，并传 S256 挑战。仅目标服务后端可兑换授权码，插件不得读取或获取宿主 access / refresh token。
 
-Games must keep their own session in the tool process and send only display data to panels. Recheck account revision while active and before protected operations. Discard stale responses on account changes or deactivation; preserve editing drafts under their original owner. Normal account-token refresh does not change revision. The service checks the parent account session on each protected operation; grants expire within 10 minutes. Server-confirmed logout invalidates the authorization. An offline logout or failed revocation stops local requests immediately, but an existing server grant may survive until its original expiry, at most 10 minutes.
+Tool plugins keep their service session in the tool process and send only display data to panels. Enhanced HTML works keep their own service session within their work scope; neither context receives host credentials. Recheck account revision while active and before protected operations. Discard stale responses on account changes or deactivation; preserve editing drafts under their original owner. Normal account-token refresh does not change revision. The service checks the parent account session on each protected operation; grants expire within 10 minutes. Server-confirmed logout invalidates the authorization. An offline logout or failed revocation stops local requests immediately, but an existing server grant may survive until its original expiry, at most 10 minutes.
 
 Errors are returned as `Error.message`: `not_logged_in`, `permission_denied`, `service_unavailable`, `account_changed`, `network`, `invalid_request`, `busy`, `plugin_inactive`, `rate_limited`. Missing service registration fails closed; there is no fallback login or arbitrary authorization URL.
 
@@ -517,3 +517,37 @@ HTML keeps the existing named-service permission and feature-detects pet.input. 
 首轮真机目标是 macOS + PS5 DualSense；Xbox、PS4/PS5 是计划支持范围，USB/蓝牙、原生焦点和具体型号仍需单独记录证据。纯 Node/类型/示例编译不证明设备兼容。当前数据格式只接受浏览器 standard mapping；auto 无可靠型号信息时显示通用标签，手动 Xbox/PlayStation 标签也不改变物理映射。没有震动、陀螺仪、自适应扳机或同机多人契约。
 
 The first hardware target is macOS with PS5 DualSense. Planned Xbox/PS4/PS5 coverage still requires model, OS and USB/Bluetooth evidence. Unit/type/example compilation is not hardware validation. This candidate accepts standard Gamepad mappings only; label preferences do not change physical mappings. Haptics, gyro, adaptive triggers and local multiplayer are outside this contract.
+
+
+## HTML account authorization / HTML 账号授权（未发布候选）
+
+The account capability is now available in the enhanced HTML `work` context as well as plugin `tool`; panel/block remain unsupported. This is a context extension of the existing experimental methods, not a new authentication protocol. No published host/package compatibility is claimed.
+
+增强 HTML 可声明 `account:authorize:cat-leaderboard`（或另一个已登记服务），再由用户通过可信宿主授权界面批准。调用 `pet.account.getState({serviceId})` 读取 `{signedIn,uid,revision}`；`pet.account.authorize({serviceId,challengeId,codeChallenge})` 返回一次性 `{code,expiresIn,revision}`。`PetAccount` 是两种上下文共用的账号能力类型，`PetWork.account` 显式复用它，不继承其他 tool 能力。权限声明不等于授权；授权仅对应指定服务，不能继承别的作品、插件或账号权限。
+
+UID identifies an account; it is not proof of ownership. The registered service backend exchanges the short-lived code with PKCE and revalidates the parent session. Host access/refresh tokens never enter an HTML work or service backend. Closing/revoking a work or switching accounts cancels pending authorization.
+
+HTML 只在用户主动启用相关功能时调用 `capabilities.request({})`。新增网络许可会重载页面，须在游戏开局或编辑草稿之前完成；拒绝或能力不支持时保留本地功能，不能伪造登录或降级创建匿名参榜身份。账号查询本身不会弹出授权，也不会提供登录凭据。
+
+| Method | tool | panel | block | work | Permission |
+|---|---|---|---|---|---|
+| account.getState | experimental | — | — | experimental | account:authorize:<serviceId> |
+| account.authorize | experimental | — | — | experimental | account:authorize:<serviceId> |
+
+No new method is added: method counts and apiVersion remain unchanged. Base scaffold permissions are unchanged. Host and account service support must be detected at runtime; this documentation does not establish a minimum released host version.
+
+旧宿主若尚不识别 `account:authorize:<serviceId>`，会在读取声明时拒绝整份 HTML，运行时方法探测无法补救；需要兼容它们时保留无账号权限声明的作品版本。纯手柄示例沿用旧命名服务权限的兼容路径不受此影响。
+
+Older hosts that do not recognize the account permission reject the HTML declaration before scripts run; feature detection alone cannot provide fallback. Retain a build without account permissions when supporting those hosts. The controller-only example's existing named-service permission path is unchanged.
+
+
+
+### 本机 HTML 授权记忆 / Local HTML grant memory（未发布候选）
+
+本机预览的已批准权限可按当前账号作用域、作品字节摘要和完整声明记忆；重开相同内容无需重复批准。作品内容或声明变化、账号切换不会继承该授权，收到的作品仍按其来源单独隔离。撤权保持到用户明确重新批准；不能将相同标题、文件名或游戏自报 id 当作授权身份。此记忆只复用已批准能力，不扩大手柄、存储或账号能力权限，也不新增公开 SDK 方法。输入配置、游戏私有存储和调用者生命周期仍按各自原有作用域处理。
+
+Approved local-preview grants may be remembered for the current account scope, exact work content hash and complete declaration. Changed content/declarations or another account do not inherit approval; received works retain source isolation. Revocation remains until explicit approval. Names and self-declared game ids are not authority. This reuses approval without expanding input, storage or account authority. It adds no public SDK method; input preferences, private storage and caller lifetimes retain their existing scopes.
+
+这次同步不增加公开方法总数（仍为30个A档、59个B档），仅使work入口从25增至27项；手柄输入10方法、三种普通插件及render隔离保持原契约。授权记忆与账号扩展均需实际候选宿主验证，不据文档推断已发布兼容版本。
+
+The public method count remains 30 frozen and 59 experimental; work gains the two existing account methods, increasing its exposed members from 25 to 27. Input's ten methods and ordinary-plugin/render boundaries are unchanged. These candidate semantics require host verification and do not establish a released compatibility version.

@@ -1,8 +1,8 @@
-import type { PetCharacter, PetCapabilities, PetServices } from './index';
+import type { PetAccount, PetCharacter, PetCapabilities, PetServices } from './index';
 import type { PetInputWork } from './input';
 
 export type WorkJson = null | boolean | number | string | WorkJson[] | { [key: string]: WorkJson };
-export type WorkPermission = 'character:read' | 'character:watch' | 'storage:read' | 'storage:write' | `service:${string}`;
+export type WorkPermission = 'character:read' | 'character:watch' | 'storage:read' | 'storage:write' | `service:${string}` | `account:authorize:${string}`;
 export interface WorkInteraction { players: 2 | 3 | 4; transport: 'lan'; protocol: { id: string; version: number }; }
 /** Work declarations are separate from plugin manifests; version 2 requires an interaction. */
 export type WorkSdkDeclaration =
@@ -77,6 +77,8 @@ export interface PetWorkSessions {
 }
 /** Experimental HTML work root. Never inherits PetCommon or ordinary plugin authority. */
 export interface PetWork {
+  /** @experimental Specific registered service only; requires declaration and trusted host consent. */
+  account: PetAccount;
   storage: PetWorkStorage;
   character: PetCharacter;
   capabilities: PetWorkCapabilities;

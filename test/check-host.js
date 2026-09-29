@@ -56,6 +56,18 @@ for (const [context, name] of contexts) {
   console.log(`PASS ${name}: ${actual.length} public members`);
 }
 
+// Account work exposure shares the same public signatures while remaining
+// unavailable to panel/block/render. The full five-context comparison stays on.
+const accountType = checker.getDeclaredTypeOfSymbol(exportsByName.get('PetAccount'));
+const accountMethods = checker.getPropertiesOfType(accountType).map(p => p.name).sort();
+const workAccount = publicEntries.filter(e => e.ns === 'account' && e.contexts.includes('work'));
+assert.deepEqual(workAccount.map(e => e.method).sort(), accountMethods, 'HTML account method/type matrix');
+for (const entry of workAccount) {
+  assert.deepEqual(entry.contexts, ['tool', 'work'], 'account is not exposed in panel/block/render');
+  assert.equal(entry.tier, 'experimental');
+}
+console.log('PASS HTML work account: existing signatures match tool/work, no extra context authority');
+
 // TypeScript resolves inherited properties and Omit; table comparison also covers docs.
 const readmeArg = process.argv.indexOf('--readme');
 const readmes = [path.join(root, 'README.md')];
@@ -109,6 +121,9 @@ try {
   const workDeclaration = { version: 1, permissions: ['service:gamepad-input'] };
   assert.deepEqual(parseDeclaration(`<script type="application/json" id="pet-sdk">${JSON.stringify(workDeclaration)}</script>`).permissions, workDeclaration.permissions);
   assert.throws(() => parseDeclaration('<script type="application/json" id="pet-sdk">{"version":1,"permissions":["input:provide"]}</script>'));
+  const accountDeclaration = { version: 1, permissions: ['account:authorize:cat-leaderboard'] };
+  assert.deepEqual(parseDeclaration(`<script type="application/json" id="pet-sdk">${JSON.stringify(accountDeclaration)}</script>`).permissions, accountDeclaration.permissions);
+  assert.throws(() => parseDeclaration('<script type="application/json" id="pet-sdk">{"version":1,"permissions":["account:authorize:UpperCase"]}</script>'));
   console.log('PASS real host input: provider declaration, bounded contracts and work consumption permission');
 
   const rendererManifest = { id: 'sample-renderer', name: 'Renderer', version: '0.1.0', apiVersion: 1,

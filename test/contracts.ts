@@ -25,6 +25,22 @@ work.input.connect(gamepadDefinition).then(connection => {
 });
 const workDeclaration: WorkSdkDeclaration = { version: 1, permissions: ['service:gamepad-input'] };
 const roomDeclaration: WorkSdkDeclaration = { version: 2, permissions: ['sessions:connect'], interaction: { players: 4, transport: 'lan', protocol: { id: 'test-room', version: 1 } } };
+const accountWorkDeclaration: WorkSdkDeclaration = { version: 1, permissions: ['account:authorize:cat-leaderboard'] };
+work.account.getState({ serviceId: 'cat-leaderboard' }).then(state => {
+  const uid: string = state.uid;
+  const signedIn: boolean = state.signedIn;
+  const revision: string = state.revision;
+  void uid; void signedIn; void revision;
+  // @ts-expect-error HTML works never receive host access credentials.
+  state.accessToken;
+});
+work.account.authorize({ serviceId: 'cat-leaderboard', challengeId: 'attempt', codeChallenge: 'S256-value' }).then(proof => {
+  const code: string = proof.code;
+  const expiry: number = proof.expiresIn;
+  void code; void expiry;
+  // @ts-expect-error Service-bound one-time proof is not a host refresh credential.
+  proof.refreshToken;
+});
 work.sessions.send({ lane: 'latest', key: 'position', type: 'move', payload: { x: 1 }, to: '*' });
 work.sessions.poll({ cursor: 0, waitMs: 1000 }).then(batch => batch.events.forEach(event => { const peer: string | undefined = event.from; }));
 work.sessions.getContext().then(context => { const count: 3 | 4 | undefined = context?.maxPlayers; });

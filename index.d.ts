@@ -855,7 +855,7 @@ export interface PetTool extends PetCommon {
   input: PetInputProvider;
   /** @experimental Only this asset plugin's appearance; requires appearance permission. */
   appearance: PetAppearance;
-  /** @experimental Account delegation is available only to tools with a registered service grant. */
+  /** @experimental Tool account delegation requires a registered service grant; enhanced HTML work has its own explicit account root. */
   account: PetAccount;
   secrets: PetSecrets;
   ui: Omit<PetUi, 'injectStyle'>;
@@ -910,6 +910,10 @@ export interface PluginAccountAuthorization {
   revision: string;
 }
 
+/** @experimental Account capability shared by tool and enhanced HTML work contexts.
+ * HTML must declare and obtain account:authorize:<serviceId>; panel/block remain unsupported.
+ * PetWork exposes this interface directly, without inheriting other tool capabilities.
+ */
 export interface PetAccount {
   /** @experimental Requires account:authorize:<serviceId>; never returns host tokens. */
   getState(options: { serviceId: string }): Promise<PluginAccountState>;
