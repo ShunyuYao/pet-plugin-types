@@ -293,3 +293,19 @@ tool.character.getRealtime().then(v => { if (v) { const a = v.assets.head; const
 // @ts-expect-error Callers cannot choose another pet.
 block.character.getRealtime({ key: 'someone-else' });
 
+
+// Enhanced HTML uses the same account contract; it never receives host credentials.
+import type { PetAccount } from '../index';
+declare const accountWork: { account: PetAccount };
+accountWork.account.getState({ serviceId: 'cat-leaderboard' }).then(state => {
+  const uid: string = state.uid;
+  const signedIn: boolean = state.signedIn;
+  void uid; void signedIn;
+  // @ts-expect-error Host account credentials are not part of the public snapshot.
+  state.accessToken;
+});
+accountWork.account.authorize({ serviceId: 'cat-leaderboard', challengeId: 'attempt', codeChallenge: 'S256-value' }).then(proof => {
+  const code: string = proof.code; void code;
+  // @ts-expect-error One-time authorization never returns refresh credentials.
+  proof.refreshToken;
+});

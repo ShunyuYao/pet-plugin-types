@@ -56,6 +56,18 @@ for (const [context, name] of contexts) {
   console.log(`PASS ${name}: ${actual.length} public members`);
 }
 
+// The HTML context shares the exported PetAccount interface, even though the
+// ordinary-plugin matrix above deliberately excludes work-only capabilities.
+const accountType = checker.getDeclaredTypeOfSymbol(exportsByName.get('PetAccount'));
+const accountMethods = checker.getPropertiesOfType(accountType).map(p => p.name).sort();
+const workAccount = publicEntries.filter(e => e.ns === 'account' && e.contexts.includes('work'));
+assert.deepEqual(workAccount.map(e => e.method).sort(), accountMethods, 'HTML account method/type matrix');
+for (const entry of workAccount) {
+  assert.deepEqual(entry.contexts, ['tool', 'work'], 'account is not exposed in panel/block');
+  assert.equal(entry.tier, 'experimental');
+}
+console.log('PASS HTML work account: exported PetAccount matches the actual host context');
+
 // TypeScript resolves inherited properties and Omit; table comparison also covers docs.
 const readmeArg = process.argv.indexOf('--readme');
 const readmes = [path.join(root, 'README.md')];

@@ -902,6 +902,10 @@ export interface PluginAccountAuthorization {
   revision: string;
 }
 
+/** @experimental Account capability shared by tool and enhanced HTML work contexts.
+ * HTML must declare and obtain account:authorize:<serviceId>; panel/block remain unsupported.
+ * Use this exported type for the account portion of window.pet in an HTML work.
+ */
 export interface PetAccount {
   /** @experimental Requires account:authorize:<serviceId>; never returns host tokens. */
   getState(options: { serviceId: string }): Promise<PluginAccountState>;
