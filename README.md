@@ -496,3 +496,16 @@ HTML 只在用户主动启用相关功能时调用 `capabilities.request({})`。
 | account.authorize | experimental | — | — | experimental | account:authorize:<serviceId> |
 
 No new method is added: method counts and apiVersion remain unchanged. Base scaffold permissions are unchanged. Host and account service support must be detected at runtime; this documentation does not establish a minimum released host version.
+
+
+## Invitation-based internet sessions / 邀请制公网会话（未发布候选）
+
+This candidate extends the existing HTML-work-only `pet.sessions` transport; it adds no SDK methods or permission names and does not expose sessions to plugin tool/panel/block contexts. The ordinary-plugin type and capability matrix above remains unchanged.
+
+增强 HTML 作品的 version 2 能力声明可使用 `interaction.transport: 'auto'`，允许用户明确邀请好友时由宿主选择局域网或公网中转；原有 `'lan'` 仍仅局域网。仍需 `sessions:connect`、真实邀请、双方同意与配对。传输选择属于声明摘要，修改为 `'auto'` 后旧授权不能自动复用；它不授予任意网络访问或指定任意目标的能力。旧宿主不识别 `'auto'` 时会拒绝这份作品，作者应保留 `'lan'` 版本，不得仅依据 `apiVersion: 1` 推断兼容。
+
+Public-network play requires compatible clients and an authenticated, compatible relay. End-to-end peer authentication and TLS remain required. Compression and binary relay framing are negotiated; unsupported peers/servers must retain a supported LAN/share-only path or report unavailability explicitly. Do not silently report a public session as connected.
+
+素材单次仍限 1 MiB。新传输协议的候选策略是按约 12 KiB/s 发送原始素材字节，让实时消息先发送；这是限速上限而非吞吐保证。内部发送期限 120 秒、接收清理期限 125 秒，SDK 调用外层期限 130 秒；旧协议保留更短的期限，不获得延长期限承诺。调用取消、窗口关闭或授权失效应传到实际传输，释放未完成素材；不能只让 Promise 报错而继续发送。兼容旧端时取消可能关闭当前通道。没有新增公开 `cancelTransfer` 方法或 `AbortSignal` 参数。
+
+No host version, npm release, server deployment, marketplace listing, two-device internet validation, or production capacity claim is implied. These are unreleased candidate contracts; use a verified compatible host build before enabling them.
