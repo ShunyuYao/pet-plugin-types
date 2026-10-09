@@ -506,6 +506,8 @@ This candidate extends the existing HTML-work-only `pet.sessions` transport; it 
 
 Public-network play requires compatible clients and an authenticated, compatible relay. End-to-end peer authentication and TLS remain required. Compression and binary relay framing are negotiated; unsupported peers/servers must retain a supported LAN/share-only path or report unavailability explicitly. Do not silently report a public session as connected.
 
-素材单次仍限 1 MiB。新传输协议的候选策略是按约 12 KiB/s 发送原始素材字节，让实时消息先发送；这是限速上限而非吞吐保证。内部发送期限 120 秒、接收清理期限 125 秒，SDK 调用外层期限 130 秒；旧协议保留更短的期限，不获得延长期限承诺。调用取消、窗口关闭或授权失效应传到实际传输，释放未完成素材；不能只让 Promise 报错而继续发送。兼容旧端时取消可能关闭当前通道。没有新增公开 `cancelTransfer` 方法或 `AbortSignal` 参数。
+素材单次仍限 1 MiB。新传输协议的候选策略是每条对端链路按约 12 KiB/s 发送原始素材字节，让实时消息先发送；这是限速上限而非吞吐保证。房间广播可对最多三名已加入客人并发，合计流量随收件人数增加。内部发送期限 120 秒、接收清理期限 125 秒，SDK 调用外层期限 130 秒；旧协议保留更短的期限，不获得延长期限承诺。调用取消、窗口关闭或授权失效应传到实际传输，释放未完成素材；不能只让 Promise 报错而继续发送。兼容旧端时取消可能关闭当前通道。没有新增公开 `cancelTransfer` 方法或 `AbortSignal` 参数。
+
+The candidate asset limit is per peer link: room broadcasts run concurrently for at most three admitted guests, so aggregate traffic grows with recipients. A failed or cancelled broadcast stops unfinished transfers; already completed deliveries cannot be rolled back.
 
 No host version, npm release, server deployment, marketplace listing, two-device internet validation, or production capacity claim is implied. These are unreleased candidate contracts; use a verified compatible host build before enabling them.
