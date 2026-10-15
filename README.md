@@ -161,6 +161,8 @@ definePluginManifest({
 | `sessions` | `readTransfer` | — | — | — | — |
 | `sessions` | `leave` | — | — | — | — |
 | `character` | `getCurrent` | B | B | B | — |
+| `character` | `getAnimationCatalog` | B | B | B | — |
+| `character` | `getAnimation` | B | B | B | — |
 | `character` | `getRealtime` | B | B | B | — |
 | `character` | `watch` | B | B | B | — |
 | `character` | `next` | B | B | B | — |
@@ -478,3 +480,14 @@ The independent provider uses the existing experimental three-method render brid
 
 Read-only snapshot of the current appearance's realtime data. It grants no rendering or pet control. This method is not in any released host yet: probe with `pet.capabilities.query('character.getRealtime')` or check the function exists, and fall back to `getCurrent` poses. Do not infer support from `apiVersion` 1 or this package version.
 
+
+
+### 完整动作只读读取（未发布） / Complete animation reads (unreleased)
+
+`character.getAnimationCatalog()` 列出当前角色所有真实注册动作和变体（帧数、fps、loop、face、available），`character.getAnimation({state,variant?,offset?,limit?,signature?})` 分页读取原始 PNG/WebP 完整帧。tool / panel / block / HTML work 可用，experimental，复用 `character:read`；不授予 `appearance:render`、角色控制或任意文件访问。`getCurrent` 保留代表图语义，不等于完整动画。
+
+Use the catalog signature on every frame-page request and follow `nextOffset` until null. A page returns at most 24 frames / 6 MiB of raw bytes (2 MiB per frame); there is no sampling. `CHARACTER_ANIMATION_CHANGED` means discard the old load and refresh the catalog. Missing states reject `CHARACTER_STATE_UNAVAILABLE`; unavailable optional variants must not prevent idle playback. Catalog availability validates file metadata; bytes are validated on read. Filesystem paths and plugin ownership never appear in responses. Do not loop filesystem/SDK reads at render frequency.
+
+默认帧页 variant=0、offset=0、limit=24；目录最多256状态、每状态32变体、每动作4096帧、合计8192帧。目录/帧页限频60/240次每分钟，每方法同时最多2个请求。先探测两个方法；旧宿主回退代表图或自带素材，不宣称旧宿主支持。类型与文档更新不代表 npm 发布或宿主发布；最低已发布兼容版本仍未确定。基础模板保持原权限。
+
+Both methods are read-only and experimental, available in tool/panel/block/work under `character:read`. Feature-detect both methods or query capabilities. No released host compatibility, npm release, new default permission, marketplace listing, or public host distribution is claimed.

@@ -293,3 +293,16 @@ tool.character.getRealtime().then(v => { if (v) { const a = v.assets.head; const
 // @ts-expect-error Callers cannot choose another pet.
 block.character.getRealtime({ key: 'someone-else' });
 
+
+// Complete animations: all ordinary roots expose the same read-only API.
+import type { CharacterAnimationCatalog, CharacterAnimationPage } from '../index';
+const animationCatalog: Promise<CharacterAnimationCatalog> = tool.character.getAnimationCatalog();
+const animationPage: Promise<CharacterAnimationPage> = panel.character.getAnimation({ state: 'idle', variant: 0, offset: 0, limit: 24, signature: 'revision' });
+block.character.getAnimation({ state: 'peek' });
+// @ts-expect-error A state is mandatory.
+tool.character.getAnimation({});
+// @ts-expect-error Callers cannot select arbitrary file paths or other pets.
+tool.character.getAnimation({ state: 'idle', path: '/private' });
+// @ts-expect-error Catalog reads have no options.
+tool.character.getAnimationCatalog({ key: 'other' });
+void animationCatalog; void animationPage;

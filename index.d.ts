@@ -449,6 +449,42 @@ export interface CharacterSnapshot extends CharacterRevision {
   poses: CharacterPose[];
 }
 
+/** @experimental Actual registered animation variant. No paths or filenames. */
+export interface CharacterAnimationVariant {
+  index: number;
+  frameCount: number;
+  fps: number;
+  loop: boolean;
+  face?: -1 | 1;
+  /** Files and metadata are available; image bytes are validated on page reads. */
+  available: boolean;
+  errorCode?: 'CHARACTER_ANIMATION_INVALID' | 'CHARACTER_ANIMATION_UNAVAILABLE' | 'CHARACTER_ANIMATION_TOO_LARGE';
+}
+/** @experimental All registered states and variants, including custom state names. */
+export interface CharacterAnimationCatalog extends CharacterRevision {
+  states: { id: string; variants: CharacterAnimationVariant[] }[];
+}
+/** @experimental One page of original, ordered PNG/WebP frames. */
+export interface CharacterAnimationPage extends CharacterRevision {
+  state: string;
+  variant: number;
+  frameCount: number;
+  fps: number;
+  loop: boolean;
+  face?: -1 | 1;
+  frames: { index: number; dataUrl: string }[];
+  nextOffset: number | null;
+}
+/** @experimental Pin signature from the catalog when reading multiple pages. */
+export interface CharacterAnimationOptions {
+  state: string;
+  variant?: number;
+  offset?: number;
+  /** Default/max 24; byte limit may return fewer frames. Follow nextOffset. */
+  limit?: number;
+  signature?: string;
+}
+
 /**
  * @experimental `getRealtime()` 返回的单项实时外观资源。只有内容，不含任何路径。
  * 图片 / 模型为 base64；`application/json` 也以 base64 给出，调用方自行解码与解析。
@@ -482,9 +518,13 @@ export interface RealtimeSnapshot extends CharacterRevision {
 export interface PetCharacter {
   /**
    * @experimental 取当前形象。`states` 指定要哪些姿势（1–8 个，不重复）；
-   * 省略则只返回形象标识、不带姿势帧。权限：`character:read`。
+   * 省略则返回 idle 的代表帧。权限：`character:read`。
    */
   getCurrent(options?: { states?: string[] }): Promise<CharacterSnapshot>;
+  /** @experimental Read-only animation catalog, character:read. Unreleased; feature-detect. */
+  getAnimationCatalog(): Promise<CharacterAnimationCatalog>;
+  /** @experimental Original frames, up to 6 MiB/page, 2 MiB/frame. Stale signature rejects CHARACTER_ANIMATION_CHANGED. */
+  getAnimation(options: CharacterAnimationOptions): Promise<CharacterAnimationPage>;
   /**
    * @experimental 只读取当前形象的实时外观数据；没有 `realtime` 描述时为 `null`。
    * 权限：`character:read`。不授予渲染或控制宠物的能力（那是 `appearance:render`）。
