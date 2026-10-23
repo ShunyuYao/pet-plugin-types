@@ -306,3 +306,9 @@ tool.character.getAnimation({ state: 'idle', path: '/private' });
 // @ts-expect-error Catalog reads have no options.
 tool.character.getAnimationCatalog({ key: 'other' });
 void animationCatalog; void animationPage;
+
+// Metadata remains optional for legacy manifests; new marketplace submissions require it.
+const marketPurpose: PluginManifest["description"] = "记录和查找剪贴板历史。";
+const legacyPurpose: PluginManifest["description"] = undefined;
+// @ts-expect-error Description must be plain text.
+const invalidPurpose: PluginManifest["description"] = {text: "invalid"};

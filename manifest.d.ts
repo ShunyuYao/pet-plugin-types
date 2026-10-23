@@ -142,6 +142,8 @@ export interface PluginManifestBase {
   /** 必须匹配 /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/ 且不含 '..' */
   id: string;
   name: string;
+  /** One-line marketplace purpose. Required for listing; optional for legacy local manifests. */
+  description?: string;
   /** 形如 x.y.z */
   version: string;
   /** 低于此宿主版本则不加载。说的是「宿主构建够不够新」。 */

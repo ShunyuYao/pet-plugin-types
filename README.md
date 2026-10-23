@@ -491,3 +491,9 @@ Use the catalog signature on every frame-page request and follow `nextOffset` un
 默认帧页 variant=0、offset=0、limit=24；目录最多256状态、每状态32变体、每动作4096帧、合计8192帧。目录/帧页限频60/240次每分钟，每方法同时最多2个请求。先探测两个方法；旧宿主回退代表图或自带素材，不宣称旧宿主支持。类型与文档更新不代表 npm 发布或宿主发布；最低已发布兼容版本仍未确定。基础模板保持原权限。
 
 Both methods are read-only and experimental, available in tool/panel/block/work under `character:read`. Feature-detect both methods or query capabilities. No released host compatibility, npm release, new default permission, marketplace listing, or public host distribution is claimed.
+
+## 市场用途简介 / Marketplace description
+
+在 manifest.json 中用 `description` 写一句话说明插件用途。发布到市场时为必填，单行纯文本、最多 200 个 Unicode 码点；旧本地插件可省略。简介是展示元数据，不改变权限或 SDK 能力。将样板文案改为插件的实际功能。
+
+Set `manifest.description` to a short, accurate purpose statement before marketplace submission (one plain-text line, up to 200 Unicode code points). Legacy local manifests may omit it. Replace template copy with the actual functionality; this metadata grants no permissions and adds no SDK methods.
