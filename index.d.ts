@@ -14,7 +14,7 @@
  * | C 不开放 | 不在公开根对象中 | 运行时可能仍有实现（内置插件在用），但不作为对外契约，第三方不得依赖 |
  *
  * 本文件当前对应 `apiVersion: 1`（见 package.json 的 `petSdk`）。
- * A 档共 30 条、B 档 48 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
+ * A 档共 30 条、B 档 57 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
  * `auth.openAuthWindow`、`pet.host.*`）**不在公开根对象中**。
  *
  * ## 返回值与注册方法
