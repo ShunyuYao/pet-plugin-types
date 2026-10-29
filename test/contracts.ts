@@ -312,3 +312,30 @@ const marketPurpose: PluginManifest["description"] = "记录和查找剪贴板�
 const legacyPurpose: PluginManifest["description"] = undefined;
 // @ts-expect-error Description must be plain text.
 const invalidPurpose: PluginManifest["description"] = {text: "invalid"};
+
+// Unreleased background AI stays tool-only; chat remains available in panels.
+tool.ai.start('Inspect images', { images: [], tools: ['own_tool'], maxSteps: 8, timeoutMs: 10000 }).then(task => {
+  const id: string = task.id;
+  tool.ai.get(id);
+  tool.ai.cancel(id);
+});
+tool.profile.getScope().then(scope => { const revision: string = scope.revision; });
+// @ts-expect-error Background jobs require a persistent tool context.
+panel.ai.start('no');
+// @ts-expect-error Blocks cannot query background jobs.
+block.ai.get('no');
+// @ts-expect-error Scope lifecycle belongs to the tool context.
+panel.profile.getScope();
+// @ts-expect-error Images are encoded data URLs, not arbitrary objects.
+tool.ai.start('bad', { images: [{ path: '/tmp/image.png' }] });
+
+tool.services.provide('declared-service', { state: () => ({ ready: true }) });
+// @ts-expect-error Service handlers require a persistent tool context.
+panel.services.provide('no', {});
+
+panel.files.pick({ kind: 'file', accept: 'images' });
+// @ts-expect-error Unknown picker kind.
+panel.files.pick({ kind: 'video' });
+tool.tools.register({ name: 'cancel-aware', schema: {}, handler: async (args, context) => { const signal: AbortSignal = context.signal; return signal.aborted; } });
+const cleanupActivation: import('../index').ActivateFn<PetTool> = async () => ({ dispose: async () => {} });
+definePluginManifest({ id: 'provider', name: 'Provider', version: '0.1.0', kind: ['tool', 'service'], entry: { tool: 'index.cjs' }, provides: { service: 'provider-control', methods: ['state'] } });

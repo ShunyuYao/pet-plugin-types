@@ -55,7 +55,7 @@ B 档方法的变更**不**强制升 `apiVersion`（这正是 `@experimental` �
 语义变更必须升。
 
 公开 SDK 根对象排除的 C 档能力：`ui.injectStyle`（主题将改为语义 Token 覆写，不再是裸 CSS 注入）、
-`pet.meetingCard`（将被声明式聊天卡片 API 泛化）、`services.provide`（当前仅内置插件可用）、
+`pet.meetingCard`（将被声明式聊天卡片 API 泛化）、
 `auth.openAuthWindow` 与 `pet.host.*`（内置特权面，属后续降权对象）。
 
 ## 返回值与注册方法
@@ -150,8 +150,9 @@ definePluginManifest({
 普通插件有 tool/panel/dashboard-card 三种上下文，实时渲染使用独立 render 沙箱和 `PetRender` 类型。render 只提供 `pet.render`，不继承普通 `Pet` 或 `PetCommon`。以下能力差异是有意的生命周期和权限边界。
 
 <!-- sdk-surface:start -->
-| 命名空间 | 方法 | tool | panel | dashboard-card | render |
-|---|---|:--:|:--:|:--:|:--:|
+
+| Namespace | Method | tool | panel | block | render |
+|---|---|---|---|---|---|
 | `render` | `onControl` | — | — | — | B |
 | `render` | `submitFrame` | — | — | — | B |
 | `render` | `fail` | — | — | — | B |
@@ -204,8 +205,13 @@ definePluginManifest({
 | `scheduler` | `cancel` | A | — | — | — |
 | `net` | `fetch` | A | — | — | — |
 | `services` | `get` | A | A | A | — |
+| `services` | `provide` | B | — | — | — |
 | `settings` | `get` | A | A | A | — |
 | `ai` | `chat` | B | B | B | — |
+| `ai` | `start` | B | — | — | — |
+| `ai` | `get` | B | — | — | — |
+| `ai` | `cancel` | B | — | — | — |
+| `profile` | `getScope` | B | — | — | — |
 | `files` | `pick` | B | B | — | — |
 | `files` | `stat` | B | B | — | — |
 | `files` | `open` | B | B | — | — |
@@ -233,6 +239,7 @@ definePluginManifest({
 | `tools` | `register` | A | — | — | — |
 | `calendar` | `registerProvider` | B | — | — | — |
 | `(root)` | `context` | — | — | A | — |
+
 <!-- sdk-surface:end -->
 
 裁剪理由（一句话版）：
@@ -499,3 +506,24 @@ Both methods are read-only and experimental, available in tool/panel/block/work 
 在 manifest.json 中用 `description` 写一句话说明插件用途。发布到市场时为必填，单行纯文本、最多 200 个 Unicode 码点；旧本地插件可省略。简介是展示元数据，不改变权限或 SDK 能力。将样板文案改为插件的实际功能。
 
 Set `manifest.description` to a short, accurate purpose statement before marketplace submission (one plain-text line, up to 200 Unicode code points). Legacy local manifests may omit it. Replace template copy with the actual functionality; this metadata grants no permissions and adds no SDK methods.
+
+## 插件后台 AI 与身份作用域（实验，未发布）
+
+`pet.ai.start(prompt, options?)`、`get(id)`、`cancel(id)` 仅 tool 上下文，需 `ai` 权限。沿用当前宠物人设与账号/宠物记忆；工具列表只允许本插件已注册的名字，不开放宿主 shell、工作区或其他插件工具。`ai.chat` 保持原有兼容行为。
+
+prompt 最长 24000 字；options 可带 `images`（最多 4 张 PNG/JPEG/WebP data URL，编码合计 512 KiB）、`tools`（最多16个自有工具名）、`maxSteps`（默认8、范围1–32）、`timeoutMs`（默认180000、范围1000–600000）。禁止以文件路径或远端URL代替图片。工具可返回 `{text,images}`，图片实际进入模型附件；普通 JSON 结果保留原语义。模型本身须支持视觉，接口存在不代表所有供应商/档位支持图片。
+
+start立即返回 `{id,status,text?,error?}`；status 为 queued/running/completed/failed/cancelled。每插件只有一个在途任务，每60秒最多10次启动，取消后排空才可重入。结果内存保存，最多20条/30分钟；重启不重放任务，也不能自动重试结果不明的外部写操作。后台经历摘要进入同宠物记忆，标记插件来源并从主人聊天列表隐藏。
+
+`pet.profile.getScope()` 仅 tool，需 `storage` 权限，返回不透明 `{scopeId,revision}`。scopeId稳定对应当前宿主账号和宠物，revision在切换后更新，切回也不能恢复旧任务。通过 `events` 权限订阅保留事件 `host:context-changed`；插件应按scopeId分开保存业务配置、加密仓键和文件目录，revision变化时取消旧工作、丢弃迟到结果。插件不能自行发出保留的宿主事件。旧storage/secrets方法仍按插件profile保存，不会自动完成业务分仓。
+
+These tool-only experimental APIs are unreleased. Probe capabilities and handle missing support; no npm publication, released minimum host version or marketplace compatibility is implied. Background runs retain the current pet identity and only selected plugin-owned tools. Images are bounded data URLs, never paths. Opaque profile scopes isolate business credentials and storage; scope revision changes cancel stale runs, including switch-away-and-back races. Existing templates retain their original permissions.
+
+
+## 声明式服务提供与图片选择（未发布）
+
+tool 可调用 `pet.services.provide(name, api)`，返回 Promise<boolean>；manifest 的 `provides.service` 必须同名，`provides.methods` 须列出 1–32 个唯一方法名。宿主拒绝保留名、未声明方法及覆盖其他插件的服务。panel/block 不提供服务。新服务应经 `services.invoke` 调用，业务核验宿主注入的 `sdkCaller`，不信任参数自报身份；旧 services.get/methods/call 通道不能调用新声明服务。
+
+`files.pick({kind:'file',accept:'images'})` 返回用户选中的绝对路径，支持 PNG/JPEG/GIF/WebP；默认文档与目录选择不变。只有真实选择后才加入授权集，选项不接收自报授权路径。工具 handler 的第二参 `{signal}` 接收任务取消。activate 可返回清理函数或 `{dispose()}`，宿主停用时先通知清理，最多等待 1 秒后终止进程。
+
+Tools may provide an experimental manifest-declared service and explicit method allowlist. Consumers use services.invoke with host-authenticated caller metadata. Image picking grants only the paths the user selected. Tool cancellation reaches the handler's second-argument AbortSignal; activation may return cleanup, with a one-second shutdown deadline.

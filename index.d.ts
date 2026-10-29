@@ -15,7 +15,7 @@
  *
  * 本文件当前对应 `apiVersion: 1`（见 package.json 的 `petSdk`）。
  * A 档共 30 条、B 档 48 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
- * `services.provide`、`auth.openAuthWindow`、`pet.host.*`）**不在公开根对象中**。
+ * `auth.openAuthWindow`、`pet.host.*`）**不在公开根对象中**。
  *
  * ## 返回值与注册方法
  *
@@ -388,8 +388,7 @@ export interface PetNet {
 
 // ─────────────────────────────────────────────────────────────
 // services —— 权限：`service:<name>` 逐服务声明。三上下文一致。
-// 注意：**消费**服务是 A 档；**提供**服务（`services.provide`）当前仅内置插件可用，
-// 判 C 档，不在本契约中。
+// 消费服务是 A 档；提供服务现为 tool-only B 档，须 manifest 声明服务与方法白名单。
 // ─────────────────────────────────────────────────────────────
 
 /** 服务代理：键为服务方法名，值为返回 Promise 的转发函数。 */
@@ -413,8 +412,8 @@ export interface PetServices {
   /**
    * @experimental 直接调用某个服务的一个方法，不经过 `get` 造代理。
    *
-   * `get()` 返回的代理最终也走这条通道；当调用方只需要打一次、或需要自己
-   * 持有参数序列化时机时，直接用 `invoke` 更省一次往返。
+   * 显式声明 provides.methods 的新服务必须使用此通道，宿主注入真实 sdkCaller。
+   * get() 仍是旧 methods/call 代理，不能消费这类新服务。
    *
    * 服务未提供、未授权、方法未在服务的方法表里声明时 reject。
    * `args` 必须可 JSON 序列化（宿主上限 64KB）。
@@ -625,6 +624,33 @@ export interface PetAi {
   chat(prompt: string, options?: AiChatOptions): Promise<string>;
 }
 
+/** @experimental Unreleased, tool-only bounded background AI. Images are data URLs, never paths. */
+export interface AiTaskOptions {
+  images?: string[];
+  tools?: string[];
+  maxSteps?: number;
+  timeoutMs?: number;
+}
+/** @experimental Results are memory-only and never replayed after restart. */
+export interface AiTaskSnapshot {
+  id: string;
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+  text?: string;
+  error?: string;
+}
+export interface PetToolAi extends PetAi {
+  /** @experimental Requires ai; at most one pending run per plugin. */
+  start(prompt: string, options?: AiTaskOptions): Promise<AiTaskSnapshot>;
+  /** @experimental Only tasks belonging to this plugin and current profile revision. */
+  get(id: string): Promise<AiTaskSnapshot>;
+  /** @experimental Abort and drain before another start. */
+  cancel(id: string): Promise<AiTaskSnapshot>;
+}
+export interface PetProfile {
+  /** @experimental Requires storage; opaque current account/pet scope and incarnation. */
+  getScope(): Promise<{ scopeId: string; revision: string }>;
+}
+
 // ─────────────────────────────────────────────────────────────
 // files —— 权限：`files` + 逐路径授权。**整组 @experimental**：权限粒度将来一定要
 // 细分（读 / 写元数据 / 唤起系统能力现在混在一档），授权路径模型仍在演进。
@@ -657,9 +683,15 @@ export interface FileStatResult {
  * 权限：`files`（@experimental）
  * 上下文：tool / panel
  */
+/** @experimental 系统选择器的兼容选项；未知字段保留扩展空间。 */
+export interface FilesPickOptions extends Record<string, unknown> {
+  kind?: 'file' | 'directory';
+  accept?: 'documents' | 'images';
+}
+
 export interface PetFiles {
-  /** @experimental 唤起宿主系统文件选择器，返回用户选中的绝对路径。`options` 字段未定型。 */
-  pick(options?: Record<string, unknown>): Promise<string[]>;
+  /** @experimental 唤起宿主系统文件选择器，返回用户选中的绝对路径。images 支持 PNG/JPEG/GIF/WebP；缺省为文档。 */
+  pick(options?: FilesPickOptions): Promise<string[]>;
   /** @experimental 列出已授权与已常驻的路径。返回结构随授权模型演进。 */
   list(): Promise<FilesListResult>;
   /** @experimental 读路径元信息。要求绝对路径且已获授权。 */
@@ -804,7 +836,7 @@ export interface ToolSpec {
   /** JSON Schema 子集，描述 handler 的入参形状（由 LLM tool-calling 约定）。 */
   schema: unknown;
   /** 宿主调用工具时执行。返回值会被 JSON 序列化送回 Agent。 */
-  handler: (args: Record<string, unknown>) => unknown | Promise<unknown>;
+  handler: (args: Record<string, unknown>, context: { signal: AbortSignal }) => unknown | Promise<unknown>;
   /** 可选：给模型的额外提示，说明何时该用这个工具。 */
   promptHint?: string;
 }
@@ -887,6 +919,12 @@ export interface PetCommon {
  * ```
  */
 export interface PetTool extends PetCommon {
+  services: PetServices & {
+    /** @experimental Requires declared provides.service and explicit method names. */
+    provide(name: string, api: Record<string, (...args: any[]) => unknown>): Promise<boolean>;
+  };
+  ai: PetToolAi;
+  profile: PetProfile;
   /** @experimental Only this asset plugin's appearance; requires appearance permission. */
   appearance: PetAppearance;
   /** @experimental Account delegation is available only to tools with a registered service grant. */
@@ -1005,7 +1043,9 @@ export interface Pet extends PetCommon {
  * @typeParam T SDK 视图类型，默认并集视图 {@link Pet}。按上下文传
  * {@link PetTool} / {@link PetPanel} / {@link PetBlock} 可拿到精确可用面。
  */
-export type ActivateFn<T = Pet> = (pet: T) => void | Promise<void>;
+/** Tool activation may return cleanup; the host waits up to one second before terminating. */
+export type PluginCleanup = (() => void | Promise<void>) | { dispose(): void | Promise<void> };
+export type ActivateFn<T = Pet> = (pet: T) => void | PluginCleanup | Promise<void | PluginCleanup>;
 
 /** 插件入口可选导出的停用钩子。插件被停用或卸载前调用。 */
 export type DeactivateFn = () => void | Promise<void>;

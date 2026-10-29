@@ -124,8 +124,8 @@ export type RequiredEntry<K extends PluginKind> =
 /** `kind` 含 `'service'` 时 `provides.service` 必填，否则整体可选。 */
 export type RequiredProvides<K extends PluginKind> =
   'service' extends K
-    ? { provides: { service: string } }
-    : { provides?: { service: string } };
+    ? { provides: { service: string; methods?: string[] } }
+    : { provides?: { service: string; methods?: string[] } };
 
 /** `entry` 在 kind 含 tool/panel/dashboard-card 任一时变为必填字段，否则可选。 */
 export type EntryField<K extends PluginKind> =
@@ -167,8 +167,7 @@ export interface PluginManifestBase {
   /**
    * 要消费的服务名。宿主授权时展开为 `service:<name>`。
    *
-   * 注意：**提供**服务（`services.provide`）当前仅内置插件可用，
-   * 第三方插件只能消费。
+   * 提供服务使用 tool-only experimental services.provide，须在 provides 中列明 service 与 methods。
    */
   services?: string[];
 }
