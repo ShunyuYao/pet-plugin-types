@@ -2,6 +2,8 @@
 
 桌宠（吐梨邦）插件 SDK 的 TypeScript 类型定义。
 
+第一次了解插件系统、安装插件或准备开发？先看 [插件入门入口](https://github.com/ShunyuYao/create-pet-plugin)；本仓库提供开发时的类型与 API 契约。
+
 > ## 本包是 SDK surface 的**唯一权威文档**
 >
 > 类型与宿主 `demo/core/plugin-runtime/sdk-surface.js` 的定义表逐条对应；分档依据是宿主
