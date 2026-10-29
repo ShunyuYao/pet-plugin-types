@@ -643,8 +643,10 @@ export interface PetToolAi extends PetAi {
   start(prompt: string, options?: AiTaskOptions): Promise<AiTaskSnapshot>;
   /** @experimental Only tasks belonging to this plugin and current profile revision. */
   get(id: string): Promise<AiTaskSnapshot>;
-  /** @experimental Abort and drain before another start. */
+  /** @experimental Abort and drain before another start; revoke a completed result that has not been delivered. */
   cancel(id: string): Promise<AiTaskSnapshot>;
+  /** @experimental Persist this plugin's completed real result in the current pet chat, once. Requires ai. */
+  deliver(id: string): Promise<boolean>;
 }
 export interface PetProfile {
   /** @experimental Requires storage; opaque current account/pet scope and incarnation. */

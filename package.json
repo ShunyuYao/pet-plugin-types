@@ -23,7 +23,7 @@
     "apiVersion": 1,
     "frozen": true,
     "frozenMethods": 30,
-    "experimentalMethods": 56,
+    "experimentalMethods": 57,
     "note": "Unreleased bounded background AI, opaque profile scope, and manifest-declared tool services. No published host compatibility is implied."
   },
   "devDependencies": {

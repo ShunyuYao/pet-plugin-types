@@ -318,6 +318,7 @@ tool.ai.start('Inspect images', { images: [], tools: ['own_tool'], maxSteps: 8, 
   const id: string = task.id;
   tool.ai.get(id);
   tool.ai.cancel(id);
+  tool.ai.deliver(id).then(delivered => { const ok: boolean = delivered; });
 });
 tool.profile.getScope().then(scope => { const revision: string = scope.revision; });
 // @ts-expect-error Background jobs require a persistent tool context.
@@ -347,3 +348,12 @@ tool.tools.register({ name: 'trusted-context', schema: {}, handler: (_args, cont
   context.source = 'chat';
   return { source, id };
 } });
+
+// @ts-expect-error Completed-result delivery belongs only to the persistent tool context.
+panel.ai.deliver('no');
+// @ts-expect-error Blocks cannot deliver background results.
+block.ai.deliver('no');
+// @ts-expect-error The host takes only a task id, never caller-supplied chat text.
+tool.ai.deliver('id', { text: 'forged' });
+// @ts-expect-error No arbitrary task result object can be delivered.
+tool.ai.deliver({ id: 'id', text: 'forged' });
