@@ -527,3 +527,8 @@ tool 可调用 `pet.services.provide(name, api)`，返回 Promise<boolean>；man
 `files.pick({kind:'file',accept:'images'})` 返回用户选中的绝对路径，支持 PNG/JPEG/GIF/WebP；默认文档与目录选择不变。只有真实选择后才加入授权集，选项不接收自报授权路径。工具 handler 的第二参 `{signal}` 接收任务取消。activate 可返回清理函数或 `{dispose()}`，宿主停用时先通知清理，最多等待 1 秒后终止进程。
 
 Tools may provide an experimental manifest-declared service and explicit method allowlist. Consumers use services.invoke with host-authenticated caller metadata. Image picking grants only the paths the user selected. Tool cancellation reaches the handler's second-argument AbortSignal; activation may return cleanup, with a one-second shutdown deadline.
+
+
+工具调用的第二参现为只读 `ToolInvocationContext`：`signal`、`source: 'chat' | 'plugin-task' | 'host'`、可选 `aiTaskId`。source 由真实宿主执行入口赋值，工具 args 中的同名字段无效；仅 plugin-task 带 ai.start 生成的任务 ID。chat 代表主对话路径，其他／未知宿主调用标为 host；来源标签本身不构成外部写授权。插件须将后台任务 ID 绑定本业务策略，避免前后台并发共用全局授权和作业集合。
+
+The read-only tool invocation context carries a host-authenticated source and optional background task ID. Arguments cannot forge it. It identifies the execution path, not user approval for arbitrary writes.

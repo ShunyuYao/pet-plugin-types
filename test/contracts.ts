@@ -339,3 +339,11 @@ panel.files.pick({ kind: 'video' });
 tool.tools.register({ name: 'cancel-aware', schema: {}, handler: async (args, context) => { const signal: AbortSignal = context.signal; return signal.aborted; } });
 const cleanupActivation: import('../index').ActivateFn<PetTool> = async () => ({ dispose: async () => {} });
 definePluginManifest({ id: 'provider', name: 'Provider', version: '0.1.0', kind: ['tool', 'service'], entry: { tool: 'index.cjs' }, provides: { service: 'provider-control', methods: ['state'] } });
+
+tool.tools.register({ name: 'trusted-context', schema: {}, handler: (_args, context) => {
+  const source: 'chat' | 'plugin-task' | 'host' = context.source;
+  const id: string | undefined = context.aiTaskId;
+  // @ts-expect-error Host context fields are read-only.
+  context.source = 'chat';
+  return { source, id };
+} });
