@@ -46,6 +46,7 @@ export type FrozenPermission =
  * `files:open`）。用得了，但要跟版本。
  */
 export type ExperimentalPermission =
+  | 'worlds:connect'
   | `account:authorize:${string}`
   | 'ui:theme'
   | 'appearance'

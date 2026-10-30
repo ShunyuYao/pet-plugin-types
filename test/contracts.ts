@@ -357,3 +357,18 @@ block.ai.deliver('no');
 tool.ai.deliver('id', { text: 'forged' });
 // @ts-expect-error No arbitrary task result object can be delivered.
 tool.ai.deliver({ id: 'id', text: 'forged' });
+
+// External worlds never accept caller-selected identity, private context or URLs.
+tool.worlds.enable({ worldId: 'community', autoWhenUnavailable: true });
+panel.worlds.getEvents({ after: 0, worldId: 'community' });
+panel.worlds.getProfile({ turiId: 'turi:100' });
+shared.worlds?.recall();
+definePluginManifest({ id: 'world-sample', name: 'World sample', version: '0.1.0', kind: ['tool'], permissions: ['worlds:connect'], entry: { tool: 'index.js' } });
+// @ts-expect-error Blocks cannot control body ownership.
+block.worlds.enter();
+// @ts-expect-error Cannot impersonate another owner.
+tool.worlds.enable({ worldId: 'community', uid: 'other' });
+// @ts-expect-error Cannot choose an arbitrary server URL.
+panel.worlds.enable({ worldId: 'community', baseUrl: 'https://example.com' });
+// @ts-expect-error Private history is not an SDK input.
+tool.worlds.enable({ worldId: 'community', history: [] });

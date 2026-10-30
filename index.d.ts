@@ -1,3 +1,5 @@
+import type { PetWorlds } from './worlds';
+export * from './worlds';
 /**
  * @pet/plugin-types — 桌宠（吐梨邦）插件 SDK 类型定义
  *
@@ -929,6 +931,8 @@ export interface PetCommon {
  * ```
  */
 export interface PetTool extends PetCommon {
+  /** @experimental Requires worlds:connect. */
+  worlds: PetWorlds;
   services: PetServices & {
     /** @experimental Requires declared provides.service and explicit method names. */
     provide(name: string, api: Record<string, (...args: any[]) => unknown>): Promise<boolean>;
@@ -962,6 +966,8 @@ export interface PetTool extends PetCommon {
  * `ui.openPanel` 在此不可用。
  */
 export interface PetPanel extends PetCommon {
+  /** @experimental Requires worlds:connect. */
+  worlds: PetWorlds;
   /**
    * @experimental Only this asset plugin's appearance; requires appearance permission.
    * 不含 `refresh`：重读素材要改宿主进程内的角色注册表，属常驻 tool 的职责，
@@ -1018,6 +1024,8 @@ export interface PetBlock extends PetCommon {
  * 可选成员会强制你先做存在性判断。
  */
 export interface Pet extends PetCommon {
+  /** @experimental tool/panel only. */
+  worlds?: PetWorlds;
   /** @experimental tool/panel only. */
   appearance?: PetAppearance;
   ui: Omit<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'injectStyle'>

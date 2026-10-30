@@ -10,7 +10,7 @@
 > `docs/plugin-sdk-freeze-review.md`（冻结方案决定版）。两者不一致时以宿主仓库为准，
 > 本包按 bug 处理。
 
-**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 57 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
+**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 70 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
 
 实时形象 M1b 与访客 M2 的类型和文档属于候选开发分支，尚未发布 npm 包或宿主构建，不声明最低支持版本。The realtime M1b and visitor M2 definitions are unreleased development candidates; neither the package version nor apiVersion 1 proves host support.
 
@@ -241,6 +241,19 @@ definePluginManifest({
 | `calendar` | `registerProvider` | B | — | — | — |
 | `(root)` | `context` | — | — | A | — |
 
+| `worlds` | `list` | B | B | — | — |
+| `worlds` | `getState` | B | B | — | — |
+| `worlds` | `enable` | B | B | — | — |
+| `worlds` | `disable` | B | B | — | — |
+| `worlds` | `enter` | B | B | — | — |
+| `worlds` | `recall` | B | B | — | — |
+| `worlds` | `getView` | B | B | — | — |
+| `worlds` | `getEvents` | B | B | — | — |
+| `worlds` | `getProfile` | B | B | — | — |
+| `worlds` | `requestFriend` | B | B | — | — |
+| `worlds` | `getAgentState` | B | B | — | — |
+| `worlds` | `createAgentPairing` | B | B | — | — |
+| `worlds` | `revokeAgent` | B | B | — | — |
 <!-- sdk-surface:end -->
 
 裁剪理由（一句话版）：
@@ -538,3 +551,19 @@ Tools may provide an experimental manifest-declared service and explicit method 
 工具调用的第二参现为只读 `ToolInvocationContext`：`signal`、`source: 'chat' | 'plugin-task' | 'host'`、可选 `aiTaskId`。source 由真实宿主执行入口赋值，工具 args 中的同名字段无效；仅 plugin-task 带 ai.start 生成的任务 ID。chat 代表主对话路径，其他／未知宿主调用标为 host；来源标签本身不构成外部写授权。插件须将后台任务 ID 绑定本业务策略，避免前后台并发共用全局授权和作业集合。
 
 The read-only tool invocation context carries a host-authenticated source and optional background task ID. Arguments cannot forge it. It identifies the execution path, not user approval for arbitrary writes.
+
+
+## 外部世界 worlds（实验，未发布） / External worlds (unreleased)
+
+`worlds.list/getState/enable/disable/enter/recall/getView/getEvents/getProfile/requestFriend` 仅 tool 和 panel，均要求 `worlds:connect`。只选择身份服务登记的小镇，不能由插件指定 URL、主人 UID、私有上下文或租约。启用和出发均由宿主展示确认；好友申请也走宿主确认和原有好友服务。
+
+主机独立持有授权。关闭面板、工具进程崩溃或 PC 离线不取消已同意的离线生活；停用、卸载和撤权持久记录撤销，停止新活动，并等待安全收尾或有限租约失效。唯一位置由统一身份权威裁决；世界和观察端须在租约过期后隐藏身体，不能自行续造状态。`recall` 只请求回家，结果仍可能为 `returning`。经历卡和同角色记忆保留，不因停用删除。
+
+分享范围仅人设、兴趣和筛选摘要。公开视图和资料不返回私有人设、原始聊天、账号令牌或服务密钥。经历为外部资料，不是主人指令；模拟活动和未完成状态必须如实呈现。自托管服务通过版本化协议连接同一身份/位置权威，不能独立铸造用户身份或好友关系。首版 PC 判定，移动平台能力预留但不参与自动出游。
+
+These thirteen experimental methods require worlds:connect in tool/panel. The host owns consent, filtered context, durable revocation and authenticated friendship requests; plugins cannot supply identity, credentials, arbitrary endpoints or leases. Closing a viewer does not stop delegated offline life. Uninstall/revocation stops new work and drains safely. Viewers must hide expired bodies. This is an unreleased candidate, not a published host compatibility claim. Feature-detect support; do not invent minHostVersion, download URLs or registry digests. Default templates keep their current permissions.
+
+
+个人模型更新（未发布）：`worlds.getAgentState/createAgentPairing/revokeAgent` 同为 tool/panel、worlds:connect。用户确认后生成 10 分钟一次性配对码；用户自建个人 Agent 消费配对码，获得仅该主人/小镇、90 天有效、可撤销的专用授权。每人用自己的模型 API，密钥只在个人 Agent。Topia 不配置共享模型，账号服务不代理模型。Agent 失联时明确暂停聊天，不能使用全镇模型代答。配对码仅展示给主人，不写日志；不要在截图或公开文档中保留有效配对码。
+
+Personal model updates: getAgentState/createAgentPairing/revokeAgent are unreleased experimental tool/panel APIs under worlds:connect. Users self-host personal agents with their own model APIs. The ten-minute pairing code yields a revocable, world/owner-scoped 90-day grant, never an account token or model credential. Neither the world nor the identity service calls a shared model. Offline agents cannot be impersonated by a fallback model.
