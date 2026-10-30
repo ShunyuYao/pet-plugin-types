@@ -10,7 +10,7 @@
 > `docs/plugin-sdk-freeze-review.md`（冻结方案决定版）。两者不一致时以宿主仓库为准，
 > 本包按 bug 处理。
 
-**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 57 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
+**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 58 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
 
 实时形象 M1b 与访客 M2 的类型和文档属于候选开发分支，尚未发布 npm 包或宿主构建，不声明最低支持版本。The realtime M1b and visitor M2 definitions are unreleased development candidates; neither the package version nor apiVersion 1 proves host support.
 
@@ -218,6 +218,7 @@ definePluginManifest({
 | `ai` | `get` | B | — | — | — |
 | `ai` | `cancel` | B | — | — | — |
 | `ai` | `deliver` | B | — | — | — |
+| `ai` | `share` | B | — | — | — |
 | `profile` | `getScope` | B | — | — | — |
 | `files` | `pick` | B | B | — | — |
 | `files` | `stat` | B | B | — | — |
@@ -544,3 +545,9 @@ Tools may provide an experimental manifest-declared service and explicit method 
 工具调用的第二参现为只读 `ToolInvocationContext`：`signal`、`source: 'chat' | 'plugin-task' | 'host'`、可选 `aiTaskId`。source 由真实宿主执行入口赋值，工具 args 中的同名字段无效；仅 plugin-task 带 ai.start 生成的任务 ID。chat 代表主对话路径，其他／未知宿主调用标为 host；来源标签本身不构成外部写授权。插件须将后台任务 ID 绑定本业务策略，避免前后台并发共用全局授权和作业集合。
 
 The read-only tool invocation context carries a host-authenticated source and optional background task ID. Arguments cannot forge it. It identifies the execution path, not user approval for arbitrary writes.
+
+## Proactive result sharing (experimental, unreleased)
+
+`pet.ai.share(id): Promise<boolean>` is tool-only and requires both `ai` and `pet` permissions. It consumes an owned completed result in the current account/pet scope; callers cannot supply message text, role, identity or thread. It persists one assistant chat message, adds a scoped unread hub reference linking to that message, and shows an idle pet bubble without opening/focusing a window or another model call. The bubble is suppressed during foreground conversations or expanded chat.
+
+Concurrent/repeated share and deliver calls do not duplicate chat messages. Repeated sharing preserves hub read state and does not repeat the bubble. History and hub records survive restart without replaying jobs. Existing cancellation, context and plugin lifecycle guards apply. `ai.deliver` keeps its chat-only behavior. Feature-detect `typeof pet.ai.share === 'function'` and report unavailable support truthfully. No released host compatibility, npm publication or marketplace package update is claimed.

@@ -14,7 +14,7 @@
  * | C 不开放 | 不在公开根对象中 | 运行时可能仍有实现（内置插件在用），但不作为对外契约，第三方不得依赖 |
  *
  * 本文件当前对应 `apiVersion: 1`（见 package.json 的 `petSdk`）。
- * A 档共 30 条、B 档 57 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
+ * A 档共 30 条、B 档 58 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
  * `auth.openAuthWindow`、`pet.host.*`）**不在公开根对象中**。
  *
  * ## 返回值与注册方法
@@ -647,6 +647,8 @@ export interface PetToolAi extends PetAi {
   cancel(id: string): Promise<AiTaskSnapshot>;
   /** @experimental Persist this plugin's completed real result in the current pet chat, once. Requires ai. */
   deliver(id: string): Promise<boolean>;
+  /** @experimental Share an owned completed result through chat, scoped hub and idle pet bubble. Requires ai and pet. Unreleased. */
+  share(id: string): Promise<boolean>;
 }
 export interface PetProfile {
   /** @experimental Requires storage; opaque current account/pet scope and incarnation. */
