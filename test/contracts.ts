@@ -364,3 +364,11 @@ block.ai.deliver('no');
 tool.ai.deliver('id', { text: 'forged' });
 // @ts-expect-error No arbitrary task result object can be delivered.
 tool.ai.deliver({ id: 'id', text: 'forged' });
+
+tool.ai.share('id').then(shared => { const ok: boolean = shared; });
+// @ts-expect-error Sharing belongs to the persistent tool context.
+panel.ai.share('id');
+// @ts-expect-error No block sharing.
+block.ai.share('id');
+// @ts-expect-error Only an owned task ID, never arbitrary message text.
+tool.ai.share('id', { text: 'forged' });
