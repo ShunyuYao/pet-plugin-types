@@ -85,6 +85,12 @@ try {
     entry: { tool: 'index.js', panel: { src: 'panel.html', transparent: true } } };
   const check = value => { fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(value)); return manifest.loadManifest(dir); };
   const loaded = check(base);
+  assert.equal(loaded.platforms, undefined, 'Legacy manifest remains platform-neutral');
+  const declaredPlatforms = ['darwin-arm64', 'win32-x64'];
+  assert.deepEqual(check({ ...base, platforms: declaredPlatforms }).platforms, declaredPlatforms);
+  for (const platforms of [[], ['macos'], ['darwin-arm64', 'darwin-arm64'], 'darwin-arm64', null, [7]]) {
+    assert.throws(() => check({ ...base, platforms }), /platforms/, 'Invalid platform declaration must fail closed');
+  }
   assert.equal(loaded.entry.panel.transparent, true);
   assert.notEqual(loaded.updateReminders, true);
   for (const updateReminders of [true, false]) assert.equal(check({ ...base, updateReminders }).updateReminders, updateReminders);

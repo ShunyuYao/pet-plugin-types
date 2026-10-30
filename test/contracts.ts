@@ -75,6 +75,13 @@ definePluginManifest({ id: 'sample', name: 'Sample', version: '1.0.0', kind: ['t
   activation: 'opt-in', updateReminders: true, permissions: ['clipboard', 'errands'],
   entry: { tool: 'index.js', panel: { src: 'panel.html', transparent: true } },
 });
+definePluginManifest({ id: 'native-sample', name: 'Native sample', version: '1.0.0', kind: ['tool'],
+  platforms: ['darwin-arm64', 'win32-x64'], entry: { tool: 'index.js' },
+});
+// @ts-expect-error A platform declaration cannot be empty.
+definePluginManifest({ id: 'empty-platform', name: 'Empty', version: '1.0.0', kind: ['tool'], platforms: [], entry: { tool: 'index.js' } });
+// @ts-expect-error Platform and architecture must both be specified from the supported list.
+definePluginManifest({ id: 'bad-platform', name: 'Bad', version: '1.0.0', kind: ['tool'], platforms: ['macos'], entry: { tool: 'index.js' } });
 // @ts-expect-error Transparent must be boolean.
 definePluginManifest({ id: 'sample', name: 'Sample', version: '1.0.0', kind: ['panel'], entry: { panel: { src: 'panel.html', transparent: 'yes' } } });
 // @ts-expect-error Tool entry is required.

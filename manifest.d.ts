@@ -17,6 +17,12 @@ export type PluginKind =
   | 'appearance-renderer'
   | 'theme';
 
+/** Package-local executable platform/architecture pairs; absence means no platform restriction. */
+export type PluginPlatform =
+  | 'darwin-arm64' | 'darwin-x64'
+  | 'win32-arm64' | 'win32-x64' | 'win32-ia32'
+  | 'linux-arm64' | 'linux-x64' | 'linux-arm';
+
 /**
  * 已冻结（A 档）的权限名。同一 `apiVersion` 内只加不改不删。
  *
@@ -148,6 +154,8 @@ export interface PluginManifestBase {
   version: string;
   /** 低于此宿主版本则不加载。说的是「宿主构建够不够新」。 */
   minHostVersion?: string;
+  /** @experimental Non-empty unique allowlist, matched by manifest and registry. Requires a supporting host. */
+  platforms?: [PluginPlatform, ...PluginPlatform[]];
   /**
    * SDK 契约版本，说的是「插件按哪一代 SDK 语义写的」——与 {@link PluginManifest.minHostVersion}
    * 是两个维度。

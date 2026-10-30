@@ -114,6 +114,12 @@ export const activate: ActivateFn = async (pet) => {
 | `manifest.d.ts` | `manifest.json` 的类型，与宿主 `manifest.js` 校验规则一一对应（含 `apiVersion`、权限字面量联合） |
 | `index.d.ts` | `pet.*` SDK 全部 A/B 档方法的签名、返回类型与权限标注 |
 
+### 平台限制（实验，待支持构建发布）
+
+包含本机执行程序的插件可声明 `platforms`，例如 `["darwin-arm64"]`。省略表示不限制平台；声明时必须为非空、不重复的精确平台／架构列表。支持值见公开 `PluginPlatform` 类型。市场登记须与实际 ZIP manifest 相同；支持此契约的宿主会在安装、更新和加载时拒绝不匹配平台。最低宿主版本须依据实际兼容构建，不能只靠版本后缀或新增字段让旧宿主理解限制。
+
+Native packages can declare a non-empty unique `platforms` allowlist, such as `["darwin-arm64"]`. Omission preserves unrestricted legacy behavior. Registry and ZIP declarations must agree. A supporting host enforces it for installation, updates and loading; documentation alone does not establish released host compatibility.
+
 ### manifest 的条件校验会在编译期生效
 
 宿主 `loadManifest` 的四条条件规则已建模进类型，用 `definePluginManifest`
