@@ -99,17 +99,17 @@ export interface PetAnimation {
   standard: boolean;
 }
 
-/** @experimental Persistent tool-only status report; does not call a model. */
+/** @experimental Generic tool-only plugin message; no AI task or model required. */
 export interface PetNotification {
   /** Stable event id within this plugin, 1–128 characters. */
   id: string;
-  /** User-facing status summary, 1–2000 characters; no secrets or raw logs. */
+  /** User-facing plugin text, 1–2000 characters; reminders, content updates or status. */
   text: string;
   /** Capture at task start with profile.getScope; never refresh a stale task's scope. */
   scope: { scopeId: string; revision: string };
 }
 export interface PetToolSurface extends PetSurface {
-  /** @experimental Requires pet and storage. Persists chat/hub once and requests a bubble; no model call. */
+  /** @experimental Requires pet and storage. Persists chat/hub once and requests a bubble; no AI permission or task required. */
   notify(input: PetNotification): Promise<boolean>;
 }
 /**

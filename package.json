@@ -24,7 +24,7 @@
     "frozen": true,
     "frozenMethods": 30,
     "experimentalMethods": 59,
-    "note": "Includes unreleased scoped status notifications; feature-detect host support. No published compatibility is implied."
+    "note": "Includes unreleased generic plugin messages independent of AI tasks; feature-detect host support. No published compatibility is implied."
   },
   "devDependencies": {
     "typescript": "5.9.3"

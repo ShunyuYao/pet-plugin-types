@@ -547,12 +547,25 @@ Tools may provide an experimental manifest-declared service and explicit method 
 The read-only tool invocation context carries a host-authenticated source and optional background task ID. Arguments cannot forge it. It identifies the execution path, not user approval for arbitrary writes.
 
 
-## 状态通知与完成结果分享（实验）
+## 通用插件消息与 AI 结果分享（实验）
 
-`pet.pet.notify({id,text,scope}): Promise<boolean>` 仅 tool，需要 `pet` 和 `storage` 权限。`id` 为插件内稳定事件 ID（1–128 字符）；`text` 是非空、最多 2000 字符的状态摘要；`scope` 是任务开始时捕获的 `profile.getScope()` 结果。宿主决定目标账号/宠物和消息角色，切换身份、停用或卸载会拒绝迟到通知。不要为旧任务重新获取新 scope。
+`pet.pet.notify({id,text,scope}): Promise<boolean>` 是所有插件共用的文本消息入口。提醒、资料更新、业务摘要、状态、插件自己生成或取得的 AI 文本均可交付；不要求 AI 权限、不要求先创建 AI 任务，也不检查是否有 completed 结果。一次调用将消息保存到当前宠物聊天、在驿站关联同一条记录，并按既有避让规则请求气泡。它仅在 tool 上下文提供，需要 `pet` 和 `storage` 权限。
 
-通知不调用模型，也不要求 AI 配置可用；保存为当前宠物聊天消息，在驿站保存同一消息的引用，并请求一次宠物气泡。重复/并发/重启后重报同一 ID 不改变已存正文、不重置已读、不再次冒泡。气泡沿用前台对话避让规则；true 表示持久通知被接受，不保证桌面当时可见。正常空轮询保持安静；任务完成、失败、待审和连续故障可汇报。不能将“AI 已生成”描述为“站外已发送”，不得包含凭据、原始日志或私人材料。
+`id` 是插件内稳定事件 ID（1–128 字符）；`text` 是非空文本（最多 2000 字符）；`scope` 是开始处理该事件时捕获的 `profile.getScope()` 结果。宿主决定目标身份、线程和消息角色。切换身份、停用或卸载会拒绝迟到消息，不应替旧事件重新获取新 scope。重复、并发及重启重报同一 ID 不改正文、不重置已读、不重复弹泡。true 表示持久消息已接受，气泡仍遵守前台交互避让，不保证当时可见。
 
-`pet.ai.share(id): Promise<boolean>` 仅 tool，需要 `ai` 和 `pet`；将本插件已完成的真实 AI 结果同时送入聊天、驿站和气泡，复用 deliver 的幂等及取消边界。状态通知不应额外调用 AI 来生成固定文案。
+```js
+const scope = await pet.profile.getScope();
+await pet.pet.notify({
+  id: 'library-update:2026-11-01',
+  text: '资料库新增三篇文章，主题是海洋生态。',
+  scope,
+});
+```
 
-`pet.notify` 为本轮尚未发布能力，先检测 `typeof pet.pet?.notify === 'function'`。旧宿主可只显示 bubble，但必须明确无法保存到驿站，不可伪报完整交付。`apiVersion: 1`、类型包版本或文档更新均不证明目标宿主兼容。Status reporting is tool-only, scoped and idempotent; it does not call a model or grant authority for external actions. No host downloads or release compatibility are implied.
+消息是否需要通知、通知什么内容由插件按用户偏好决定。B 站「只提示结果和待处理事项」是该插件的策略，不限制通用接口只接收状态。插件负责内容真实性及权限，不泄露凭据，不把草稿或模型生成误报为已完成外部发送。
+
+`pet.ai.share(id): Promise<boolean>` 是已有 AI 任务的便捷入口，需要 `ai` 和 `pet` 权限；取出本插件已完成的真实结果后，复用同一条通用交付通道。普通插件应直接使用 `pet.pet.notify`，无需为了发送消息调用模型。`ai.deliver` 继续保留仅交付聊天的旧行为。
+
+本轮能力尚未发布，应先检测 `typeof pet.pet?.notify === 'function'`。旧宿主的 bubble 回退不保证聊天和驿站持久化；apiVersion、类型包版本或文档更新均不证明宿主兼容。
+
+The generic tool-only message API accepts plugin-provided text without AI permission, an AI task ID, or a completed model result. It persists one chat message and hub reference and requests a bubble, enforcing scope, lifecycle and event deduplication. AI sharing is a convenience adapter over the same delivery channel. Per-plugin notification policy does not narrow the generic contract. No new host release or npm publication is implied.
