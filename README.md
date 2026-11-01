@@ -10,7 +10,7 @@
 > `docs/plugin-sdk-freeze-review.md`（冻结方案决定版）。两者不一致时以宿主仓库为准，
 > 本包按 bug 处理。
 
-**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 57 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
+**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 59 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
 
 实时形象 M1b 与访客 M2 的类型和文档属于候选开发分支，尚未发布 npm 包或宿主构建，不声明最低支持版本。The realtime M1b and visitor M2 definitions are unreleased development candidates; neither the package version nor apiVersion 1 proves host support.
 
@@ -246,7 +246,8 @@ definePluginManifest({
 | `tools` | `register` | A | — | — | — |
 | `calendar` | `registerProvider` | B | — | — | — |
 | `(root)` | `context` | — | — | A | — |
-
+| `pet` | `notify` | B | — | — | — |
+| `ai` | `share` | B | — | — | — |
 <!-- sdk-surface:end -->
 
 裁剪理由（一句话版）：
@@ -544,3 +545,14 @@ Tools may provide an experimental manifest-declared service and explicit method 
 工具调用的第二参现为只读 `ToolInvocationContext`：`signal`、`source: 'chat' | 'plugin-task' | 'host'`、可选 `aiTaskId`。source 由真实宿主执行入口赋值，工具 args 中的同名字段无效；仅 plugin-task 带 ai.start 生成的任务 ID。chat 代表主对话路径，其他／未知宿主调用标为 host；来源标签本身不构成外部写授权。插件须将后台任务 ID 绑定本业务策略，避免前后台并发共用全局授权和作业集合。
 
 The read-only tool invocation context carries a host-authenticated source and optional background task ID. Arguments cannot forge it. It identifies the execution path, not user approval for arbitrary writes.
+
+
+## 状态通知与完成结果分享（实验）
+
+`pet.pet.notify({id,text,scope}): Promise<boolean>` 仅 tool，需要 `pet` 和 `storage` 权限。`id` 为插件内稳定事件 ID（1–128 字符）；`text` 是非空、最多 2000 字符的状态摘要；`scope` 是任务开始时捕获的 `profile.getScope()` 结果。宿主决定目标账号/宠物和消息角色，切换身份、停用或卸载会拒绝迟到通知。不要为旧任务重新获取新 scope。
+
+通知不调用模型，也不要求 AI 配置可用；保存为当前宠物聊天消息，在驿站保存同一消息的引用，并请求一次宠物气泡。重复/并发/重启后重报同一 ID 不改变已存正文、不重置已读、不再次冒泡。气泡沿用前台对话避让规则；true 表示持久通知被接受，不保证桌面当时可见。正常空轮询保持安静；任务完成、失败、待审和连续故障可汇报。不能将“AI 已生成”描述为“站外已发送”，不得包含凭据、原始日志或私人材料。
+
+`pet.ai.share(id): Promise<boolean>` 仅 tool，需要 `ai` 和 `pet`；将本插件已完成的真实 AI 结果同时送入聊天、驿站和气泡，复用 deliver 的幂等及取消边界。状态通知不应额外调用 AI 来生成固定文案。
+
+`pet.notify` 为本轮尚未发布能力，先检测 `typeof pet.pet?.notify === 'function'`。旧宿主可只显示 bubble，但必须明确无法保存到驿站，不可伪报完整交付。`apiVersion: 1`、类型包版本或文档更新均不证明目标宿主兼容。Status reporting is tool-only, scoped and idempotent; it does not call a model or grant authority for external actions. No host downloads or release compatibility are implied.
