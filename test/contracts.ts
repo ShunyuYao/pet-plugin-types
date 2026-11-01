@@ -364,3 +364,23 @@ block.ai.deliver('no');
 tool.ai.deliver('id', { text: 'forged' });
 // @ts-expect-error No arbitrary task result object can be delivered.
 tool.ai.deliver({ id: 'id', text: 'forged' });
+
+// Generic plugin messages and the AI sharing convenience API remain tool-only.
+tool.profile.getScope().then(scope => tool.pet.notify({ id: 'work:failed', text: '处理未完成', scope }));
+tool.ai.share('completed-task');
+// @ts-expect-error No durable status API in a panel.
+panel.pet.notify({ id: 'x', text: 'x', scope: { scopeId: 'x', revision: 'r' } });
+// @ts-expect-error No durable status API in a block.
+block.pet.notify({ id: 'x', text: 'x', scope: { scopeId: 'x', revision: 'r' } });
+// @ts-expect-error Captured identity scope is required.
+tool.pet.notify({ id: 'x', text: 'x' });
+// @ts-expect-error Cannot choose the chat role.
+tool.pet.notify({ id: 'x', text: 'x', scope: {scopeId: 'x', revision: 'r'}, role: 'user' });
+// @ts-expect-error Completed AI sharing belongs to tools.
+panel.ai.share('no');
+
+tool.profile.getScope().then(scope => tool.pet.notify({ id: 'library-update', text: '资料库新增三篇文章。', scope }));
+
+tool.profile.getScope().then(scope => tool.pet.notify({ id: 'library-update', scope, cancel: true }));
+// @ts-expect-error Cancellation cannot also publish a replacement body.
+tool.pet.notify({ id: 'x', scope: {scopeId: 'x', revision: 'r'}, cancel: true, text: 'replacement' });

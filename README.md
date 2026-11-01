@@ -10,7 +10,7 @@
 > `docs/plugin-sdk-freeze-review.md`（冻结方案决定版）。两者不一致时以宿主仓库为准，
 > 本包按 bug 处理。
 
-**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 57 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
+**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 59 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
 
 实时形象 M1b 与访客 M2 的类型和文档属于候选开发分支，尚未发布 npm 包或宿主构建，不声明最低支持版本。The realtime M1b and visitor M2 definitions are unreleased development candidates; neither the package version nor apiVersion 1 proves host support.
 
@@ -246,7 +246,8 @@ definePluginManifest({
 | `tools` | `register` | A | — | — | — |
 | `calendar` | `registerProvider` | B | — | — | — |
 | `(root)` | `context` | — | — | A | — |
-
+| `pet` | `notify` | B | — | — | — |
+| `ai` | `share` | B | — | — | — |
 <!-- sdk-surface:end -->
 
 裁剪理由（一句话版）：
@@ -544,3 +545,29 @@ Tools may provide an experimental manifest-declared service and explicit method 
 工具调用的第二参现为只读 `ToolInvocationContext`：`signal`、`source: 'chat' | 'plugin-task' | 'host'`、可选 `aiTaskId`。source 由真实宿主执行入口赋值，工具 args 中的同名字段无效；仅 plugin-task 带 ai.start 生成的任务 ID。chat 代表主对话路径，其他／未知宿主调用标为 host；来源标签本身不构成外部写授权。插件须将后台任务 ID 绑定本业务策略，避免前后台并发共用全局授权和作业集合。
 
 The read-only tool invocation context carries a host-authenticated source and optional background task ID. Arguments cannot forge it. It identifies the execution path, not user approval for arbitrary writes.
+
+
+## 通用插件消息与 AI 结果分享（实验）
+
+`pet.pet.notify({id,text,scope}): Promise<boolean>` 是所有插件共用的文本消息入口。提醒、资料更新、业务摘要、状态、插件自己生成或取得的 AI 文本均可交付；不要求 AI 权限、不要求先创建 AI 任务，也不检查是否有 completed 结果。一次调用将消息保存到当前宠物聊天、在驿站关联同一条记录，并按既有避让规则请求气泡。它仅在 tool 上下文提供，需要 `pet` 和 `storage` 权限。
+
+`id` 是插件内稳定事件 ID（1–128 字符）；`text` 是非空文本（最多 128000 字符，与已有完整 AI 结果上限一致）；`scope` 是开始处理该事件时捕获的 `profile.getScope()` 结果。宿主决定目标身份、线程和消息角色。切换身份、停用或卸载会拒绝迟到消息，不应替旧事件重新获取新 scope。重复、并发及重启重报同一 ID 不改正文、不重置已读、不重复弹泡。true 表示持久消息已接受，气泡仍遵守前台交互避让，不保证当时可见。长正文在气泡中使用简短预览，聊天保留完整文本。
+
+```js
+const scope = await pet.profile.getScope();
+await pet.pet.notify({
+  id: 'library-update:2026-11-01',
+  text: '资料库新增三篇文章，主题是海洋生态。',
+  scope,
+});
+```
+
+消息是否需要通知、通知什么内容由插件按用户偏好决定。B 站「只提示结果和待处理事项」是该插件的策略，不限制通用接口只接收状态。插件负责内容真实性及权限，不泄露凭据，不把草稿或模型生成误报为已完成外部发送。
+
+`pet.pet.notify({id, scope, cancel: true})` 可取消本插件同一 scope 下尚在排队的消息（此时不传 text）：成功取消返回 true，已提交或没有待处理消息返回 false；不会撤回已保存内容。调用方必须同时停止重试该事件。取消同样受 SDK 调用预算约束。
+
+`pet.ai.share(id): Promise<boolean>` 是保留给旧插件的 AI 任务兼容入口，需要 `ai` 和 `pet` 权限；取出本插件已完成的真实结果后，复用同一条通用交付通道。新代码与已迁移业务调用应直接使用 `pet.pet.notify`，无需为了发送消息调用模型。`ai.deliver` 继续保留仅交付聊天的旧行为。
+
+本轮能力尚未发布，应先检测 `typeof pet.pet?.notify === 'function'`。旧宿主的 bubble 回退不保证聊天和驿站持久化；apiVersion、类型包版本或文档更新均不证明宿主兼容。
+
+The generic tool-only message API accepts plugin-provided text without AI permission, an AI task ID, or a completed model result. It persists one chat message and hub reference and requests a bubble, enforcing scope, lifecycle and event deduplication. AI sharing is a convenience adapter over the same delivery channel. Per-plugin notification policy does not narrow the generic contract. No new host release or npm publication is implied.

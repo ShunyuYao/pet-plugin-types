@@ -14,7 +14,7 @@
  * | C 不开放 | 不在公开根对象中 | 运行时可能仍有实现（内置插件在用），但不作为对外契约，第三方不得依赖 |
  *
  * 本文件当前对应 `apiVersion: 1`（见 package.json 的 `petSdk`）。
- * A 档共 30 条、B 档 57 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
+ * A 档共 30 条、B 档 59 条；C 档（`ui.injectStyle`、`pet.meetingCard`、
  * `auth.openAuthWindow`、`pet.host.*`）**不在公开根对象中**。
  *
  * ## 返回值与注册方法
@@ -99,6 +99,27 @@ export interface PetAnimation {
   standard: boolean;
 }
 
+/** @experimental Generic tool-only plugin message; no AI task or model required. */
+export interface PetNotification {
+  /** Stable event id within this plugin, 1–128 characters. */
+  id: string;
+  /** User-facing plugin text, 1–128000 characters; reminders, content updates or status. */
+  text: string;
+  cancel?: never;
+  /** Capture at task start with profile.getScope; never refresh a stale task's scope. */
+  scope: { scopeId: string; revision: string };
+}
+/** @experimental Cancel a pending message; true only before commit. Never retracts saved messages. */
+export interface PetNotificationCancellation {
+  id: string;
+  scope: { scopeId: string; revision: string };
+  cancel: true;
+  text?: never;
+}
+export interface PetToolSurface extends PetSurface {
+  /** @experimental Requires pet and storage. Persists chat/hub once and requests a bubble; no AI permission or task required. */
+  notify(input: PetNotification | PetNotificationCancellation): Promise<boolean>;
+}
 /**
  * 宠物表现通道。操作方法返回 `false` 表示宠物窗当前不存在（不是错误）。
  *
@@ -647,6 +668,8 @@ export interface PetToolAi extends PetAi {
   cancel(id: string): Promise<AiTaskSnapshot>;
   /** @experimental Persist this plugin's completed real result in the current pet chat, once. Requires ai. */
   deliver(id: string): Promise<boolean>;
+  /** @experimental Requires ai and pet; deliver a completed result with one hub notice and bubble. */
+  share(id: string): Promise<boolean>;
 }
 export interface PetProfile {
   /** @experimental Requires storage; opaque current account/pet scope and incarnation. */
@@ -929,6 +952,7 @@ export interface PetCommon {
  * ```
  */
 export interface PetTool extends PetCommon {
+  pet: PetToolSurface;
   services: PetServices & {
     /** @experimental Requires declared provides.service and explicit method names. */
     provide(name: string, api: Record<string, (...args: any[]) => unknown>): Promise<boolean>;
@@ -1018,6 +1042,7 @@ export interface PetBlock extends PetCommon {
  * 可选成员会强制你先做存在性判断。
  */
 export interface Pet extends PetCommon {
+  pet: PetSurface & Partial<Pick<PetToolSurface, 'notify'>>;
   /** @experimental tool/panel only. */
   appearance?: PetAppearance;
   ui: Omit<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'injectStyle'>
