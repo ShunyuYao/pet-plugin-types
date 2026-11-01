@@ -10,7 +10,7 @@
 > `docs/plugin-sdk-freeze-review.md`（冻结方案决定版）。两者不一致时以宿主仓库为准，
 > 本包按 bug 处理。
 
-**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 59 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
+**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 63 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
 
 实时形象 M1b 与访客 M2 的类型和文档属于候选开发分支，尚未发布 npm 包或宿主构建，不声明最低支持版本。The realtime M1b and visitor M2 definitions are unreleased development candidates; neither the package version nor apiVersion 1 proves host support.
 
@@ -218,6 +218,10 @@ definePluginManifest({
 | `ai` | `get` | B | — | — | — |
 | `ai` | `cancel` | B | — | — | — |
 | `ai` | `deliver` | B | — | — | — |
+| `conversation` | `bind` | B | — | — | — |
+| `conversation` | `getBinding` | B | — | — | — |
+| `conversation` | `unbind` | B | — | — | — |
+| `conversation` | `changed` | B | — | — | — |
 | `profile` | `getScope` | B | — | — | — |
 | `files` | `pick` | B | B | — | — |
 | `files` | `stat` | B | B | — | — |
@@ -571,3 +575,11 @@ await pet.pet.notify({
 通用消息接口已进入 0.30.2 macOS arm64 受邀渠道宿主；0.30.0/0.30.1 发布包不支持。Windows 需等待对应兼容宿主构建。仍应检测 `typeof pet.pet?.notify === 'function'`；旧宿主的 bubble 回退不保证聊天和驿站持久化，apiVersion 或类型包版本不能代替能力检查。本次仅同步源码文档，不代表 npm 包已发布。
 
 The generic tool-only message API accepts plugin-provided text without AI permission, an AI task ID, or a completed model result. It persists one chat message and hub reference and requests a bubble, enforcing scope, lifecycle and event deduplication. AI sharing is a convenience adapter over the same delivery channel. Per-plugin notification policy does not narrow the generic contract. The generic message API is available in the invitation-only macOS arm64 host 0.30.2; older releases lack it. Windows requires a matching compatible host build. No npm publication is implied.
+
+### External primary conversation (experimental, unreleased)
+
+`conversation` permission lets a persistent tool bind the current account/pet chat to its own declared service. The service must implement `start`, `poll`, `history`, and `cancel`. The host passes `{bindingId,scopeId,requestId,text}` for start, `{bindingId,scopeId,requestId}` for poll/cancel, and `{bindingId,scopeId,page,pageSize}` for history, followed by host-authenticated `sdkCaller: {kind:'host',id:'conversation',context:'host'}` metadata. Providers must reject other callers. `start` acknowledges promptly; `poll` returns queued/running/completed/failed/cancelled, with `text` for completion. History returns `{messages:[{id,role:'user'|'assistant',content,createdAt}],page,hasMore}`; only text is accepted. Each RPC is bounded; long generation belongs to the provider job, not one RPC.
+
+`bind({service,label})` returns an opaque binding; `getBinding()` returns only this plugin's current binding. `changed()` refreshes visible history. `unbind()` explicitly restores local chat. Offline, revoked, crashed or removed providers do not silently fall back to a different local identity. Providers must stop work on profile revision changes, deduplicate submissions, preserve uncertain outcomes, and isolate delivery by source. Cancellation stops waiting/delivery and must not claim rollback of remote effects. Background plugin AI is unchanged; cross-plugin activity sharing requires a separate opt-in integration.
+
+Feature-detect this namespace. No released minimum host version, npm publication, or marketplace compatibility is claimed. Basic templates do not request this permission.

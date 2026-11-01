@@ -951,6 +951,25 @@ export interface PetCommon {
  * };
  * ```
  */
+/** @experimental Unreleased external primary conversation; tool-only, conversation permission. */
+export interface ConversationBinding {
+  bindingId: string;
+  pluginId: string;
+  service: string;
+  label: string;
+  scopeId: string;
+}
+export interface PetConversation {
+  /** @experimental Bind a plugin-owned declared service with start/poll/history/cancel methods to the current owner/pet. */
+  bind(options: { service: string; label: string }): Promise<ConversationBinding>;
+  /** @experimental Current owned binding only. */
+  getBinding(): Promise<ConversationBinding | null>;
+  /** @experimental Explicitly restore local chat; disabling the plugin deliberately does not unbind. */
+  unbind(): Promise<boolean>;
+  /** @experimental Notify a history change. */
+  changed(): Promise<boolean>;
+}
+
 export interface PetTool extends PetCommon {
   pet: PetToolSurface;
   services: PetServices & {
@@ -959,6 +978,7 @@ export interface PetTool extends PetCommon {
   };
   ai: PetToolAi;
   profile: PetProfile;
+  conversation: PetConversation;
   /** @experimental Only this asset plugin's appearance; requires appearance permission. */
   appearance: PetAppearance;
   /** @experimental Account delegation is available only to tools with a registered service grant. */

@@ -384,3 +384,14 @@ tool.profile.getScope().then(scope => tool.pet.notify({ id: 'library-update', te
 tool.profile.getScope().then(scope => tool.pet.notify({ id: 'library-update', scope, cancel: true }));
 // @ts-expect-error Cancellation cannot also publish a replacement body.
 tool.pet.notify({ id: 'x', scope: {scopeId: 'x', revision: 'r'}, cancel: true, text: 'replacement' });
+
+tool.conversation.bind({service:'example-chat',label:'Existing pet'});
+const externalBinding = tool.conversation.getBinding();
+tool.conversation.unbind();
+tool.conversation.changed();
+// @ts-expect-error Only persistent tool providers own primary conversation routing.
+panel.conversation.bind({service:'example-chat',label:'x'});
+// @ts-expect-error Conversation does not exist in blocks.
+block.conversation.getBinding();
+// @ts-expect-error Arbitrary external URLs are not binding arguments.
+tool.conversation.bind({service:'example-chat',label:'x',url:'https://example.com'});
