@@ -103,14 +103,22 @@ export interface PetAnimation {
 export interface PetNotification {
   /** Stable event id within this plugin, 1–128 characters. */
   id: string;
-  /** User-facing plugin text, 1–2000 characters; reminders, content updates or status. */
+  /** User-facing plugin text, 1–128000 characters; reminders, content updates or status. */
   text: string;
+  cancel?: never;
   /** Capture at task start with profile.getScope; never refresh a stale task's scope. */
   scope: { scopeId: string; revision: string };
 }
+/** @experimental Cancel a pending message; true only before commit. Never retracts saved messages. */
+export interface PetNotificationCancellation {
+  id: string;
+  scope: { scopeId: string; revision: string };
+  cancel: true;
+  text?: never;
+}
 export interface PetToolSurface extends PetSurface {
   /** @experimental Requires pet and storage. Persists chat/hub once and requests a bubble; no AI permission or task required. */
-  notify(input: PetNotification): Promise<boolean>;
+  notify(input: PetNotification | PetNotificationCancellation): Promise<boolean>;
 }
 /**
  * 宠物表现通道。操作方法返回 `false` 表示宠物窗当前不存在（不是错误）。

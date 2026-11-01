@@ -380,3 +380,7 @@ tool.pet.notify({ id: 'x', text: 'x', scope: {scopeId: 'x', revision: 'r'}, role
 panel.ai.share('no');
 
 tool.profile.getScope().then(scope => tool.pet.notify({ id: 'library-update', text: '资料库新增三篇文章。', scope }));
+
+tool.profile.getScope().then(scope => tool.pet.notify({ id: 'library-update', scope, cancel: true }));
+// @ts-expect-error Cancellation cannot also publish a replacement body.
+tool.pet.notify({ id: 'x', scope: {scopeId: 'x', revision: 'r'}, cancel: true, text: 'replacement' });

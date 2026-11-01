@@ -551,7 +551,7 @@ The read-only tool invocation context carries a host-authenticated source and op
 
 `pet.pet.notify({id,text,scope}): Promise<boolean>` 是所有插件共用的文本消息入口。提醒、资料更新、业务摘要、状态、插件自己生成或取得的 AI 文本均可交付；不要求 AI 权限、不要求先创建 AI 任务，也不检查是否有 completed 结果。一次调用将消息保存到当前宠物聊天、在驿站关联同一条记录，并按既有避让规则请求气泡。它仅在 tool 上下文提供，需要 `pet` 和 `storage` 权限。
 
-`id` 是插件内稳定事件 ID（1–128 字符）；`text` 是非空文本（最多 2000 字符）；`scope` 是开始处理该事件时捕获的 `profile.getScope()` 结果。宿主决定目标身份、线程和消息角色。切换身份、停用或卸载会拒绝迟到消息，不应替旧事件重新获取新 scope。重复、并发及重启重报同一 ID 不改正文、不重置已读、不重复弹泡。true 表示持久消息已接受，气泡仍遵守前台交互避让，不保证当时可见。
+`id` 是插件内稳定事件 ID（1–128 字符）；`text` 是非空文本（最多 128000 字符，与已有完整 AI 结果上限一致）；`scope` 是开始处理该事件时捕获的 `profile.getScope()` 结果。宿主决定目标身份、线程和消息角色。切换身份、停用或卸载会拒绝迟到消息，不应替旧事件重新获取新 scope。重复、并发及重启重报同一 ID 不改正文、不重置已读、不重复弹泡。true 表示持久消息已接受，气泡仍遵守前台交互避让，不保证当时可见。长正文在气泡中使用简短预览，聊天保留完整文本。
 
 ```js
 const scope = await pet.profile.getScope();
@@ -564,7 +564,9 @@ await pet.pet.notify({
 
 消息是否需要通知、通知什么内容由插件按用户偏好决定。B 站「只提示结果和待处理事项」是该插件的策略，不限制通用接口只接收状态。插件负责内容真实性及权限，不泄露凭据，不把草稿或模型生成误报为已完成外部发送。
 
-`pet.ai.share(id): Promise<boolean>` 是已有 AI 任务的便捷入口，需要 `ai` 和 `pet` 权限；取出本插件已完成的真实结果后，复用同一条通用交付通道。普通插件应直接使用 `pet.pet.notify`，无需为了发送消息调用模型。`ai.deliver` 继续保留仅交付聊天的旧行为。
+`pet.pet.notify({id, scope, cancel: true})` 可取消本插件同一 scope 下尚在排队的消息（此时不传 text）：成功取消返回 true，已提交或没有待处理消息返回 false；不会撤回已保存内容。调用方必须同时停止重试该事件。取消同样受 SDK 调用预算约束。
+
+`pet.ai.share(id): Promise<boolean>` 是保留给旧插件的 AI 任务兼容入口，需要 `ai` 和 `pet` 权限；取出本插件已完成的真实结果后，复用同一条通用交付通道。新代码与已迁移业务调用应直接使用 `pet.pet.notify`，无需为了发送消息调用模型。`ai.deliver` 继续保留仅交付聊天的旧行为。
 
 本轮能力尚未发布，应先检测 `typeof pet.pet?.notify === 'function'`。旧宿主的 bubble 回退不保证聊天和驿站持久化；apiVersion、类型包版本或文档更新均不证明宿主兼容。
 
