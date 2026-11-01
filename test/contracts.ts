@@ -359,7 +359,7 @@ tool.ai.deliver('id', { text: 'forged' });
 tool.ai.deliver({ id: 'id', text: 'forged' });
 
 // External worlds never accept caller-selected identity, private context or URLs.
-tool.worlds.enable({ worldId: 'community', autoWhenUnavailable: true });
+tool.worlds.enable({ worldId: 'community', autoWhenUnavailable: true, aiSource: 'desktop', offlineAllowed: false });
 panel.worlds.getEvents({ after: 0, worldId: 'community' });
 panel.worlds.getProfile({ turiId: 'turi:100' });
 shared.worlds?.recall();
@@ -372,3 +372,7 @@ tool.worlds.enable({ worldId: 'community', uid: 'other' });
 panel.worlds.enable({ worldId: 'community', baseUrl: 'https://example.com' });
 // @ts-expect-error Private history is not an SDK input.
 tool.worlds.enable({ worldId: 'community', history: [] });
+
+panel.worlds.getAiState().then(ai => { const left: number | null | undefined = ai.trial?.remaining; void left; });
+// @ts-expect-error An explicit source and offline decision are required.
+tool.worlds.enable({worldId: 'community'});

@@ -1,7 +1,8 @@
 /** Unreleased experimental external-world API, protocol version 1. */
-export interface WorldDescriptor { id: string; name: string; baseUrl: string }
+export interface WorldDescriptor { id: string; name: string; baseUrl: string; officialAvailable: boolean }
 export interface WorldState {
   protocolVersion: 1; checked: boolean; enabled: boolean; controlled: boolean;
+  aiSource: 'desktop' | 'official' | null; offlineAllowed: boolean; modelReady: boolean;
   desktopAllowed: boolean; validForMs: number | null; expiresAt: number | null;
   phase: 'checking' | 'returning' | 'town' | 'leaving' | 'visiting' | 'desktop';
   text: string; error: string; world: WorldDescriptor | null; uid: string; epoch: number;
@@ -31,19 +32,22 @@ export interface PersonalAgentState {
   agentId?: string; name?: string; expiresAt?: number; lastSeenAt?: number;
 }
 export interface PetWorlds {
-  /** @experimental Public connection status of this owner's personal agent. */
-  getAgentState(): Promise<PersonalAgentState>;
-  /** @experimental Native confirmation; one-use code expires in ten minutes. Never a model API key or account login token. */
-  createAgentPairing(): Promise<{ accepted: false } | { accepted: true; protocolVersion: 1; code: string; expiresAt: number; world: WorldDescriptor; authorityUrl: string }>;
-  /** @experimental Native confirmation then revokes this owner's agent and pending pairing for this world. */
-  revokeAgent(): Promise<{ accepted: false } | { revoked: true }>;
+  /** @experimental Current source and sponsored quota; never model credentials. */
+  getAiState(): Promise<{ protocolVersion: 1; source: 'desktop' | 'official' | null; offlineAllowed: boolean; ready: boolean;
+    trial: { available: boolean; reason: 'unconfigured' | 'personal_limit' | 'global_limit' | null; remaining: number | null; limit: number | null; resetsAt: number | null } | null }>;
+  /** @experimental @deprecated Retired before release. Always rejects with personal_agent_retired. */
+  getAgentState(): Promise<never>;
+  /** @experimental @deprecated Retired before release. Always rejects with personal_agent_retired. */
+  createAgentPairing(): Promise<never>;
+  /** @experimental @deprecated Retired before release. Always rejects with personal_agent_retired. */
+  revokeAgent(): Promise<never>;
 
   /** @experimental Only registered worlds; no caller-selected server URL. Requires worlds:connect. */
   list(): Promise<WorldDescriptor[]>;
   /** @experimental Public projection only; never returns identity credentials or private context. */
   getState(): Promise<WorldState>;
   /** @experimental Host consent displays the exact filtered sharing scope. */
-  enable(options: { worldId: string; autoWhenUnavailable?: boolean }): Promise<WorldConsentResult>;
+  enable(options: { worldId: string; aiSource: 'desktop' | 'official'; offlineAllowed: boolean; autoWhenUnavailable?: boolean }): Promise<WorldConsentResult>;
   /** @experimental Revokes new work; waits for safe ownership release before displaying a desktop body. */
   disable(): Promise<WorldState>;
   /** @experimental Requires a new explicit owner confirmation and an available body. */

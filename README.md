@@ -10,7 +10,7 @@
 > `docs/plugin-sdk-freeze-review.md`（冻结方案决定版）。两者不一致时以宿主仓库为准，
 > 本包按 bug 处理。
 
-**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 70 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
+**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 71 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
 
 实时形象 M1b 与访客 M2 的类型和文档属于候选开发分支，尚未发布 npm 包或宿主构建，不声明最低支持版本。The realtime M1b and visitor M2 definitions are unreleased development candidates; neither the package version nor apiVersion 1 proves host support.
 
@@ -251,6 +251,7 @@ definePluginManifest({
 | `worlds` | `getEvents` | B | B | — | — |
 | `worlds` | `getProfile` | B | B | — | — |
 | `worlds` | `requestFriend` | B | B | — | — |
+| `worlds` | `getAiState` | B | B | — | — |
 | `worlds` | `getAgentState` | B | B | — | — |
 | `worlds` | `createAgentPairing` | B | B | — | — |
 | `worlds` | `revokeAgent` | B | B | — | — |
@@ -561,9 +562,9 @@ The read-only tool invocation context carries a host-authenticated source and op
 
 分享范围仅人设、兴趣和筛选摘要。公开视图和资料不返回私有人设、原始聊天、账号令牌或服务密钥。经历为外部资料，不是主人指令；模拟活动和未完成状态必须如实呈现。自托管服务通过版本化协议连接同一身份/位置权威，不能独立铸造用户身份或好友关系。首版 PC 判定，移动平台能力预留但不参与自动出游。
 
-These thirteen experimental methods require worlds:connect in tool/panel. The host owns consent, filtered context, durable revocation and authenticated friendship requests; plugins cannot supply identity, credentials, arbitrary endpoints or leases. Closing a viewer does not stop delegated offline life. Uninstall/revocation stops new work and drains safely. Viewers must hide expired bodies. This is an unreleased candidate, not a published host compatibility claim. Feature-detect support; do not invent minHostVersion, download URLs or registry digests. Default templates keep their current permissions.
+These fourteen experimental methods (including three retired stubs) require worlds:connect in tool/panel. The host owns consent, filtered context, durable revocation and authenticated friendship requests; plugins cannot supply identity, credentials, arbitrary endpoints or leases. Closing a viewer does not stop delegated offline life. Uninstall/revocation stops new work and drains safely. Viewers must hide expired bodies. This is an unreleased candidate, not a published host compatibility claim. Feature-detect support; do not invent minHostVersion, download URLs or registry digests. Default templates keep their current permissions.
 
 
-个人模型更新（未发布）：`worlds.getAgentState/createAgentPairing/revokeAgent` 同为 tool/panel、worlds:connect。用户确认后生成 10 分钟一次性配对码；用户自建个人 Agent 消费配对码，获得仅该主人/小镇、90 天有效、可撤销的专用授权。每人用自己的模型 API，密钥只在个人 Agent。Topia 不配置共享模型，账号服务不代理模型。Agent 失联时明确暂停聊天，不能使用全镇模型代答。配对码仅展示给主人，不写日志；不要在截图或公开文档中保留有效配对码。
+2026-11-01 来源修订（未发布）：`enable` 必须明确传入 `aiSource: 'desktop' | 'official'` 和 `offlineAllowed`。小镇独立选择来源，本机模式复用宿主私有 API 配置，密钥/执行票据不进入插件；锁屏仍在线，退出/睡眠/断网后安全离镇。官方模式仅对服务端登记且开放体验的世界可用，限每日个人与全服额度，不扣用户积分；离线活动需明确授权，退出登录撤销托管。`getAiState` 返回白名单状态与体验剩余次数，来源变化不得静默回退。旧三种个人 Agent 方法保留失败桩并返回 `personal_agent_retired`，不再要求安装或配对。
 
-Personal model updates: getAgentState/createAgentPairing/revokeAgent are unreleased experimental tool/panel APIs under worlds:connect. Users self-host personal agents with their own model APIs. The ten-minute pairing code yields a revocable, world/owner-scoped 90-day grant, never an account token or model credential. Neither the world nor the identity service calls a shared model. Offline agents cannot be impersonated by a fallback model.
+The unreleased revision requires explicit town-specific AI source and offline consent. Desktop BYOK runs only in the live host process, including a locked screen; credentials stay local. Official trial calls are server-authorized and bounded by per-user/global daily quotas, without spending user credits. Logout revokes offline delegation. `getAiState` exposes only safe status/quota fields. Legacy personal-agent methods reject with `personal_agent_retired`. No public compatibility or deployment is implied.
