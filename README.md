@@ -568,6 +568,6 @@ await pet.pet.notify({
 
 `pet.ai.share(id): Promise<boolean>` 是保留给旧插件的 AI 任务兼容入口，需要 `ai` 和 `pet` 权限；取出本插件已完成的真实结果后，复用同一条通用交付通道。新代码与已迁移业务调用应直接使用 `pet.pet.notify`，无需为了发送消息调用模型。`ai.deliver` 继续保留仅交付聊天的旧行为。
 
-本轮能力尚未发布，应先检测 `typeof pet.pet?.notify === 'function'`。旧宿主的 bubble 回退不保证聊天和驿站持久化；apiVersion、类型包版本或文档更新均不证明宿主兼容。
+通用消息接口已进入 0.30.2 macOS arm64 受邀渠道宿主；0.30.0/0.30.1 发布包不支持。Windows 需等待对应兼容宿主构建。仍应检测 `typeof pet.pet?.notify === 'function'`；旧宿主的 bubble 回退不保证聊天和驿站持久化，apiVersion 或类型包版本不能代替能力检查。本次仅同步源码文档，不代表 npm 包已发布。
 
-The generic tool-only message API accepts plugin-provided text without AI permission, an AI task ID, or a completed model result. It persists one chat message and hub reference and requests a bubble, enforcing scope, lifecycle and event deduplication. AI sharing is a convenience adapter over the same delivery channel. Per-plugin notification policy does not narrow the generic contract. No new host release or npm publication is implied.
+The generic tool-only message API accepts plugin-provided text without AI permission, an AI task ID, or a completed model result. It persists one chat message and hub reference and requests a bubble, enforcing scope, lifecycle and event deduplication. AI sharing is a convenience adapter over the same delivery channel. Per-plugin notification policy does not narrow the generic contract. The generic message API is available in the invitation-only macOS arm64 host 0.30.2; older releases lack it. Windows requires a matching compatible host build. No npm publication is implied.

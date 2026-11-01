@@ -24,7 +24,7 @@
     "frozen": true,
     "frozenMethods": 30,
     "experimentalMethods": 59,
-    "note": "Includes unreleased generic plugin messages independent of AI tasks; feature-detect host support. No published compatibility is implied."
+    "note": "Includes experimental generic messages in compatible host 0.30.2 builds; feature-detect support. Source synchronization does not imply npm publication."
   },
   "devDependencies": {
     "typescript": "5.9.3"
