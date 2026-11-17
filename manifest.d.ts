@@ -53,6 +53,7 @@ export type FrozenPermission =
  */
 export type ExperimentalPermission =
   | 'conversation'
+  | 'worlds:connect'
   | `account:authorize:${string}`
   | 'ui:theme'
   | 'appearance'

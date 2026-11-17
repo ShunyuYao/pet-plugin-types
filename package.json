@@ -8,7 +8,8 @@
     "manifest.d.ts",
     "theme.d.ts",
     "README.md",
-    "render.d.ts"
+    "render.d.ts",
+    "worlds.d.ts"
   ],
   "license": "MIT",
   "repository": {
@@ -23,8 +24,8 @@
     "apiVersion": 1,
     "frozen": true,
     "frozenMethods": 30,
-    "experimentalMethods": 66,
-    "note": "Includes unreleased experimental external conversations. Feature-detect support; source synchronization does not imply npm publication. Includes unreleased experimental desktop panels."
+    "experimentalMethods": 80,
+    "note": "Includes unreleased desktop panels and external worlds. Feature-detect support; no published host or npm compatibility is implied."
   },
   "devDependencies": {
     "typescript": "5.9.3"

@@ -10,7 +10,7 @@
 > `docs/plugin-sdk-freeze-review.md`（冻结方案决定版）。两者不一致时以宿主仓库为准，
 > 本包按 bug 处理。
 
-**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 63 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
+**当前 `apiVersion: 1`。** A 档 30 个方法已冻结，B 档 80 个标 `@experimental`（包括本分支尚未发布的实时渲染能力）。
 
 实时形象 M1b 与访客 M2 的类型和文档属于候选开发分支，尚未发布 npm 包或宿主构建，不声明最低支持版本。The realtime M1b and visitor M2 definitions are unreleased development candidates; neither the package version nor apiVersion 1 proves host support.
 
@@ -204,6 +204,9 @@ definePluginManifest({
 | `ui` | `openPanel` | A | — | — | — |
 | `ui` | `closePanel` | A | A | — | — |
 | `ui` | `setPanelPinned` | B | B | — | — |
+| `ui` | `getPanelBounds` | B | B | — | — |
+| `ui` | `setPanelBounds` | B | B | — | — |
+| `ui` | `setPanelHitRegions` | B | B | — | — |
 | `events` | `on` | A | A | A | — |
 | `events` | `emit` | A | A | A | — |
 | `scheduler` | `every` | A | — | — | — |
@@ -252,6 +255,21 @@ definePluginManifest({
 | `(root)` | `context` | — | — | A | — |
 | `pet` | `notify` | B | — | — | — |
 | `ai` | `share` | B | — | — | — |
+
+| `worlds` | `list` | B | B | — | — |
+| `worlds` | `getState` | B | B | — | — |
+| `worlds` | `enable` | B | B | — | — |
+| `worlds` | `disable` | B | B | — | — |
+| `worlds` | `enter` | B | B | — | — |
+| `worlds` | `recall` | B | B | — | — |
+| `worlds` | `getView` | B | B | — | — |
+| `worlds` | `getEvents` | B | B | — | — |
+| `worlds` | `getProfile` | B | B | — | — |
+| `worlds` | `requestFriend` | B | B | — | — |
+| `worlds` | `getAiState` | B | B | — | — |
+| `worlds` | `getAgentState` | B | B | — | — |
+| `worlds` | `createAgentPairing` | B | B | — | — |
+| `worlds` | `revokeAgent` | B | B | — | — |
 <!-- sdk-surface:end -->
 
 裁剪理由（一句话版）：
@@ -587,3 +605,17 @@ Feature-detect this namespace. No released minimum host version, npm publication
 ### Desktop panels (experimental, unreleased)
 
 `entry.panel.desktop: true` requires `transparent: true`. With `ui` permission, tool/panel may feature-detect `getPanelBounds`, `setPanelBounds`, and `setPanelHitRegions`. Geometry is in DIP; sizes 64–2000 are clamped to the display work area. Positions persist within the plugin profile. Hit regions are up to 64 local rectangles, `[]` passes all mouse input through and `null` restores capture. The host polls the actual cursor to recover input. Close/disable/crash cleans up polling. Other contexts and non-desktop panels are rejected. No access to other windows. Source synchronization is not a published host/npm compatibility guarantee.
+## 外部世界 worlds（实验，未发布） / External worlds (unreleased)
+
+`worlds.list/getState/enable/disable/enter/recall/getView/getEvents/getProfile/requestFriend` 仅 tool 和 panel，均要求 `worlds:connect`。只选择身份服务登记的小镇，不能由插件指定 URL、主人 UID、私有上下文或租约。启用和出发均由宿主展示确认；好友申请也走宿主确认和原有好友服务。
+
+主机独立持有授权。关闭面板、工具进程崩溃或 PC 离线不取消已同意的离线生活；停用、卸载和撤权持久记录撤销，停止新活动，并等待安全收尾或有限租约失效。唯一位置由统一身份权威裁决；世界和观察端须在租约过期后隐藏身体，不能自行续造状态。`recall` 只请求回家，结果仍可能为 `returning`。经历卡和同角色记忆保留，不因停用删除。
+
+分享范围仅人设、兴趣和筛选摘要。公开视图和资料不返回私有人设、原始聊天、账号令牌或服务密钥。经历为外部资料，不是主人指令；模拟活动和未完成状态必须如实呈现。自托管服务通过版本化协议连接同一身份/位置权威，不能独立铸造用户身份或好友关系。首版 PC 判定，移动平台能力预留但不参与自动出游。
+
+These fourteen experimental methods (including three retired stubs) require worlds:connect in tool/panel. The host owns consent, filtered context, durable revocation and authenticated friendship requests; plugins cannot supply identity, credentials, arbitrary endpoints or leases. Closing a viewer does not stop delegated offline life. Uninstall/revocation stops new work and drains safely. Viewers must hide expired bodies. This is an unreleased candidate, not a published host compatibility claim. Feature-detect support; do not invent minHostVersion, download URLs or registry digests. Default templates keep their current permissions.
+
+
+2026-11-01 来源修订（未发布）：`enable` 必须明确传入 `aiSource: 'desktop' | 'official'` 和 `offlineAllowed`。小镇独立选择来源，本机模式复用宿主私有 API 配置，密钥/执行票据不进入插件；锁屏仍在线，退出/睡眠/断网后安全离镇。官方模式仅对服务端登记且开放体验的世界可用，限每日个人与全服额度，不扣用户积分；离线活动需明确授权，退出登录撤销托管。`getAiState` 返回白名单状态与体验剩余次数，来源变化不得静默回退。旧三种个人 Agent 方法保留失败桩并返回 `personal_agent_retired`，不再要求安装或配对。
+
+The unreleased revision requires explicit town-specific AI source and offline consent. Desktop BYOK runs only in the live host process, including a locked screen; credentials stay local. Official trial calls are server-authorized and bounded by per-user/global daily quotas, without spending user credits. Logout revokes offline delegation. `getAiState` exposes only safe status/quota fields. Legacy personal-agent methods reject with `personal_agent_retired`. No public compatibility or deployment is implied.
