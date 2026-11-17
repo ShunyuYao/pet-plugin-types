@@ -395,3 +395,14 @@ panel.conversation.bind({service:'example-chat',label:'x'});
 block.conversation.getBinding();
 // @ts-expect-error Arbitrary external URLs are not binding arguments.
 tool.conversation.bind({service:'example-chat',label:'x',url:'https://example.com'});
+
+const desktopGeometry: Promise<import('../index').DesktopPanelGeometry | null> = panel.ui.getPanelBounds();
+tool.ui.setPanelBounds({ width: 480, x: -200 });
+panel.ui.setPanelHitRegions([{ x: 10, y: 20, width: 100, height: 80 }]);
+shared.ui.setPanelHitRegions?.(null);
+// @ts-expect-error Blocks cannot control native desktop windows.
+block.ui.getPanelBounds();
+// @ts-expect-error No caller-supplied window IDs.
+panel.ui.setPanelBounds({ windowId: 3 });
+// @ts-expect-error Bounds require numeric DIP values.
+panel.ui.setPanelBounds({ width: '480px' });

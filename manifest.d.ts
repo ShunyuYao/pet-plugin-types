@@ -80,6 +80,8 @@ export interface PanelEntry {
   title?: string;
   /** 宿主 panel 透明背景配置；与页面样式共同决定显示效果。 */
   transparent?: boolean;
+  /** @experimental Persistent desktop surface; requires transparent:true and an updated host. */
+  desktop?: boolean;
 }
 
 export interface DashboardBlockEntry {

@@ -237,7 +237,7 @@ export interface PetErrands {
 }
 
 // ─────────────────────────────────────────────────────────────
-// ui —— 权限：`ui`。4 冻结 + 2 实验；`ui.injectStyle`（权限 `ui:theme`）判 C 档，
+// ui —— 权限：`ui`。4 冻结 + 5 实验；`ui.injectStyle`（权限 `ui:theme`）判 C 档，
 // 不在公开 SDK 根对象中；旧 PetUi 成员仅作声明兼容。
 // ─────────────────────────────────────────────────────────────
 
@@ -297,6 +297,11 @@ export interface TaskCheckResult {
  * 权限：`ui`
  * 上下文：见各方法（`openPanel` 仅 tool、`closePanel` 无 dashboard-card）
  */
+/** Desktop window geometry in screen DIP, not physical pixels. @experimental */
+export interface DesktopPanelRect { x: number; y: number; width: number; height: number }
+/** @experimental */
+export interface DesktopPanelGeometry { bounds: DesktopPanelRect; workArea: DesktopPanelRect }
+
 export interface PetUi {
   /**
    * @deprecated @internal C 档（closed），不属于第三方公开契约。
@@ -326,6 +331,12 @@ export interface PetUi {
   closePanel(): Promise<boolean>;
   /** @experimental tool/panel：设置本插件面板置顶；false 时失焦关闭。返回 true。 */
   setPanelPinned(pinned: boolean): Promise<boolean>;
+  /** @experimental tool/panel, ui permission, desktop:true only. Null while closed. */
+  getPanelBounds(): Promise<DesktopPanelGeometry | null>;
+  /** @experimental Partial nonempty DIP bounds, 64–2000 size, clamped to work area. */
+  setPanelBounds(bounds: Partial<DesktopPanelRect>): Promise<DesktopPanelGeometry>;
+  /** @experimental Up to 64 local DIP rectangles. null: capture all; []: pass through all. */
+  setPanelHitRegions(regions: DesktopPanelRect[] | null): Promise<boolean>;
   /**
    * @experimental 任务完成确认卡。签名可能在任一 apiVersion 变更，不走废弃流程。
    * 上下文：tool / panel / dashboard-card
@@ -1048,7 +1059,7 @@ export interface PetAccount {
  * （区块不是 panel 窗口）；多出 `dashboard` 与 `context` 常量。
  */
 export interface PetBlock extends PetCommon {
-  ui: Omit<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'injectStyle'>;
+  ui: Omit<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'getPanelBounds' | 'setPanelBounds' | 'setPanelHitRegions' | 'injectStyle'>;
   dashboard: PetDashboard;
   /** 区块自我标识，让同一份代码判断自己跑在哪种形态里。 */
   context: 'dashboard-block';
@@ -1065,8 +1076,8 @@ export interface Pet extends PetCommon {
   pet: PetSurface & Partial<Pick<PetToolSurface, 'notify'>>;
   /** @experimental tool/panel only. */
   appearance?: PetAppearance;
-  ui: Omit<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'injectStyle'>
-    & Partial<Pick<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned'>>;
+  ui: Omit<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'getPanelBounds' | 'setPanelBounds' | 'setPanelHitRegions' | 'injectStyle'>
+    & Partial<Pick<PetUi, 'openPanel' | 'closePanel' | 'setPanelPinned' | 'getPanelBounds' | 'setPanelBounds' | 'setPanelHitRegions'>>;
   /** @experimental 仅 tool。 */
   badge?: PetBadge;
   /** @experimental tool/panel；轮询方法仅 tool。 */

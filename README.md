@@ -583,3 +583,7 @@ The generic tool-only message API accepts plugin-provided text without AI permis
 `bind({service,label})` returns an opaque binding; `getBinding()` returns only this plugin's current binding. `changed()` refreshes visible history. `unbind()` explicitly restores local chat. Offline, revoked, crashed or removed providers do not silently fall back to a different local identity. Providers must stop work on profile revision changes, deduplicate submissions, preserve uncertain outcomes, and isolate delivery by source. Cancellation stops waiting/delivery and must not claim rollback of remote effects. Background plugin AI is unchanged; cross-plugin activity sharing requires a separate opt-in integration.
 
 Feature-detect this namespace. No released minimum host version, npm publication, or marketplace compatibility is claimed. Basic templates do not request this permission.
+
+### Desktop panels (experimental, unreleased)
+
+`entry.panel.desktop: true` requires `transparent: true`. With `ui` permission, tool/panel may feature-detect `getPanelBounds`, `setPanelBounds`, and `setPanelHitRegions`. Geometry is in DIP; sizes 64–2000 are clamped to the display work area. Positions persist within the plugin profile. Hit regions are up to 64 local rectangles, `[]` passes all mouse input through and `null` restores capture. The host polls the actual cursor to recover input. Close/disable/crash cleans up polling. Other contexts and non-desktop panels are rejected. No access to other windows. Source synchronization is not a published host/npm compatibility guarantee.
