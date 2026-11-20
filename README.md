@@ -1,5 +1,13 @@
 # @pet/plugin-types
 
+吐梨邦（Turi Topia）提供可聊天、互动和到朋友桌面串门的 AI 桌宠。
+
+Turi Topia (吐梨邦) brings AI pets to the desktop, with conversation, interaction and visits between friends.
+
+[官网 / Website](https://turitopia.com/) · [脚手架与指南 / Scaffold](https://github.com/ShunyuYao/create-pet-plugin) · [SDK 类型 / API types](https://github.com/ShunyuYao/pet-plugin-types) · [插件市场 / Registry](https://github.com/ShunyuYao/pet-plugin-registry)
+
+本仓库提供插件 SDK 类型与 API 契约；市场上线状态不适用，不作为插件上架。This repository supplies SDK types and API contracts; marketplace listing status is not applicable.
+
 桌宠（吐梨邦）插件 SDK 的 TypeScript 类型定义。
 
 第一次了解插件系统、安装插件或准备开发？先看 [插件入门入口](https://github.com/ShunyuYao/create-pet-plugin)；本仓库提供开发时的类型与 API 契约。
@@ -602,9 +610,9 @@ The generic tool-only message API accepts plugin-provided text without AI permis
 
 Feature-detect this namespace. No released minimum host version, npm publication, or marketplace compatibility is claimed. Basic templates do not request this permission.
 
-### Desktop panels (experimental, unreleased)
+### Desktop panels (experimental; macOS host 0.33.0)
 
-`entry.panel.desktop: true` requires `transparent: true`. With `ui` permission, tool/panel may feature-detect `getPanelBounds`, `setPanelBounds`, and `setPanelHitRegions`. Geometry is in DIP; sizes 64–2000 are clamped to the display work area. Positions persist within the plugin profile. Hit regions are up to 64 local rectangles, `[]` passes all mouse input through and `null` restores capture. The host polls the actual cursor to recover input. Close/disable/crash cleans up polling. Other contexts and non-desktop panels are rejected. No access to other windows. Source synchronization is not a published host/npm compatibility guarantee.
+`entry.panel.desktop: true` requires `transparent: true`. With `ui` permission, tool/panel may feature-detect `getPanelBounds`, `setPanelBounds`, and `setPanelHitRegions`. Geometry is in DIP; sizes 64–2000 are clamped to the display work area. Positions persist within the plugin profile. Hit regions are up to 64 local rectangles, `[]` passes all mouse input through and `null` restores capture. The host polls the actual cursor to recover input. Close/disable/crash cleans up polling. Other contexts and non-desktop panels are rejected. No access to other windows. Verified with the signed and notarized macOS Apple Silicon host 0.33.0 on 2026-11-20, including actual plugin installation, geometry, background reminders and restart recovery. Older hosts need upgrading; other platforms require a compatible build. Continue feature detection. This source update does not publish an npm package; hosts remain invitation-only.
 ## 外部世界 worlds（实验，未发布） / External worlds (unreleased)
 
 `worlds.list/getState/enable/disable/enter/recall/getView/getEvents/getProfile/requestFriend` 仅 tool 和 panel，均要求 `worlds:connect`。只选择身份服务登记的小镇，不能由插件指定 URL、主人 UID、私有上下文或租约。启用和出发均由宿主展示确认；好友申请也走宿主确认和原有好友服务。

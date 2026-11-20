@@ -25,7 +25,7 @@
     "frozen": true,
     "frozenMethods": 30,
     "experimentalMethods": 80,
-    "note": "Includes unreleased desktop panels and external worlds. Feature-detect support; no published host or npm compatibility is implied."
+    "note": "Desktop panels verified on macOS Apple Silicon host 0.33.0. Other candidate APIs still require capability detection; no npm publication is implied."
   },
   "devDependencies": {
     "typescript": "5.9.3"
